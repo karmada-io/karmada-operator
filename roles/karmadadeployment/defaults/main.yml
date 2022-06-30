@@ -1,11 +1,20 @@
 ---
 # defaults file for KarmadaDeployment
-
-image: "{{ 'quay.io/coreos/etcd:v' + version | string }}"
+# etcd
+etcd_image: "{{ 'quay.io/coreos/etcd:v' + etcd.version | string }}"
 etcd_namespace: "{{ ansible_operator_meta.namespace }}"
-etcd_cluster_name: "{{ ansible_operator_meta.name }}"
+etcd_cluster_name: "{{ ansible_operator_meta.name }}-etcd"
 etcd_client_port: 2379
 etcd_peer_port: 2380
+etcd_version: "{{ etcd.version }}"
+etcd_size: "{{ etcd.size | int }}"
+# "pvc" means using volumeClaimTemplates
+# "hostPath" means using hostPath
+etcd_storage_type: "{{ etcd.storage_type }}"
+# etcd.internal.pvc.storageClass storageClass name of PVC
+etcd_pvc_storage_class: "{{ etcd.pvc.storage_class }}"
+# etcd.internal.pvc.size size of PVC
+etcd_pvc_size: "{{ etcd.pvc.size }}"
 etcd_app_label: "etcd"
 etcd_volume_mounts:
 - name: "etcd-data"
@@ -43,7 +52,6 @@ etcd_remove_pods: []
 etcd_valid_member_ids: []
 etcd_cluster_member_names: []
 
-
 state: "present"
 tls_secret_name: "{{ ansible_operator_meta.name }}-{{ etcd_client_secret_name }}"
 etcd_client_secret_name: "etcd-client-tls"
@@ -53,12 +61,16 @@ etcd_server_secret_name: "etcd-server-tls"
 rsa_key_size: 2048
 cert_common_name: "karmada"
 cert_org: "karmada.io"
-cert_domain: "cluster.local"
+cert_domain: "{{ cluster_domain }}"
+cluster_domain: "{{  cluster_domain | default('cluster.local') }}"
+dns_domain: "{{ cluster_domain }}"
+kubernetes_service_ip: "{{ kube_service_subnet | ipaddr('net') | ipaddr(1) | ipaddr('address') }}"
+kube_service_subnet: "10.96.0.0/12"
 
-etcd_certs_expired: "3650"
+
+etcd_certs_expired: "36500"
 etcd_cert_dir: "/tmp/etcd_certs/{{etcd_cluster_name}}"
 etcd_tls_directory: "/tmp/etcdtls/{{etcd_cluster_name}}"
-
 
 # OpenSSL Conf
 etcd_crt_conf_filename: "{{ etcd_cert_dir }}/etcd_openssl.conf"
@@ -78,3 +90,124 @@ etcd_client_key_filename: "{{ etcd_cert_dir }}/etcd_client.key"
 etcd_server_crt_filename: "{{ etcd_cert_dir }}/server.crt"
 etcd_server_csr_filename: "{{ etcd_cert_dir }}/server.csr"
 etcd_server_key_filename: "{{ etcd_cert_dir }}/server.key"
+
+# karmada
+karmada_certs_expired: "36500"
+karmada_namespace: "{{ ansible_operator_meta.namespace }}"
+karmada_cluster_name: "{{ ansible_operator_meta.name }}"
+karmada_cert_dir: "/tmp/karmada_certs/{{karmada_cluster_name}}"
+karmada_tls_directory: "/tmp/karmadatls/{{karmada_cluster_name}}"
+karmada_server_secret_name: "karmada-cert-secret"
+karmada_client_secret_name: "karmada-cert-secret"
+karmada_cluster_phase: "new"
+karmada_app_label: "karmada"
+karmada_service_type: "{{ api_server.service_type }}"
+
+
+# OpenSSL Conf
+karmada_crt_conf_filename: "{{ karmada_cert_dir }}/karmada_openssl.conf"
+
+# Karmada Certs
+karmada_ca_crt_filename: "{{ karmada_cert_dir }}/ca.crt"
+karmada_ca_key_filename: "{{ karmada_cert_dir }}/ca.key"
+
+karmada_front_proxy_ca_crt_filename: "{{ karmada_cert_dir }}/front-proxy-ca.crt"
+karmada_front_proxy_ca_key_filename: "{{ karmada_cert_dir }}/front-proxy-key.key"
+
+karmada_front_proxy_client_ca_crt_filename: "{{ karmada_cert_dir }}/front-proxy-client.crt"
+karmada_front_proxy_client_ca_csr_filename: "{{ karmada_cert_dir }}/front-proxy-client.csr"
+karmada_front_proxy_client_ca_key_filename: "{{ karmada_cert_dir }}/front-proxy-client.key"
+
+karmada_server_crt_filename: "{{ karmada_cert_dir }}/server.crt"
+karmada_server_csr_filename: "{{ karmada_cert_dir }}/server.csr"
+karmada_server_key_filename: "{{ karmada_cert_dir }}/server.key"
+
+karmada_server_kubelet_client_crt_filename: "{{ karmada_cert_dir }}/apiserver-kubelet-client.crt"
+karmada_server_kubelet_client_csr_filename: "{{ karmada_cert_dir }}/apiserver-kubelet-client.csr"
+karmada_server_kubelet_client_key_filename: "{{ karmada_cert_dir }}/apiserver-kubelet-client.key"
+
+karmada_sa_key_filename: "{{ karmada_cert_dir }}/sa.key"
+karmada_sa_pub_filename: "{{ karmada_cert_dir }}/sa.pub"
+
+karmada_kube_controller_manager_crt_filename: "{{ karmada_cert_dir }}/kube-controller-manager.crt"
+karmada_kube_controller_manager_csr_filename: "{{ karmada_cert_dir }}/kube-controller-manager.csr"
+karmada_kube_controller_manager_key_filename: "{{ karmada_cert_dir }}/kube-controller-manager.key"
+
+karmada_admin_crt_filename: "{{ karmada_cert_dir }}/admin.crt"
+karmada_admin_csr_filename: "{{ karmada_cert_dir }}/admin.csr"
+karmada_admin_key_filename: "{{ karmada_cert_dir }}/admin.key"
+
+karmada_client_secret: "{{ q('k8s', api_version='v1', kind='Secret', namespace=karmada_namespace, resource_name=karmada_client_secret_name) }}"
+karmada_apiserver_deploy: "{{ q('k8s', api_version='apps/v1', kind='Deployment', namespace=karmada_namespace, resource_name=karmada_apiserver_name) }}"
+
+# ansible operator
+karmada_config_dir: "/tmp/karmada"
+karmada_config: "{{ karmada_config_dir }}/kubeconfig"
+
+karmada_controlplane_manifests: "{{ karmada_config_dir }}/controlplane"
+karmada_member_manifests: "{{ karmada_config_dir }}/member"
+
+# scheduler estimator
+scheduler_estimator_enabled: true
+
+# karmada version
+karmada_version: "v1.2.0"
+karmada_aggregated_apiserver_version: "{{ aggregated_api_server.version | default(karmada_version) }}"
+karmada_controller_manager_version: "{{ controller_manager.version | default(karmada_version) }}"
+karmada_descheduler_version: "{{ descheduler.version | default(karmada_version) }}"
+karmada_scheduler_version: "{{ scheduler.version | default(karmada_version) }}"
+karmada_scheduler_estimator_version: "{{ scheduler_estimator.version | default(karmada_version) }}"
+karmada_search_version: "{{ search.version | default(karmada_version) }}"
+karmada_webhook_version: "{{ webhook.version | default(karmada_version) }}"
+
+# kube version
+kube_default_version: "v1.21.7"
+kube_apiserver_version: "{{ api_server.version | default(kube_default_version) }}"
+kube_controller_manager_version: "{{ kube_controller_manager.version | default(kube_default_version) }}"
+
+# karmada image registry
+karmada_image_registry: "{{ karmada_registry | default('swr.ap-southeast-1.myhuaweicloud.com') }}"
+
+# kube image registry
+kube_image_registry: "{{ kube_registry | default('k8s.gcr.io') }}"
+
+# operator
+inventory_path: "/tmp/ansible"
+bin_dir: "/usr/local/bin"
+karmada_apiserver_name: "karmada-apiserver"
+
+# apiserver
+apiserver_size: "{{ api_server.size | int }}"
+lb_karmada_apiserver_ip : "{{ api_server.load_balancer_apiserver_ip }}"
+
+# scheduler
+scheduler_size: "{{ scheduler.size | int }}"
+
+# weebhook
+webhook_size: "{{ webhook.size | int }}"
+
+# controllerManager
+controller_manager_size: "{{ controller_manager.size | int }}"
+
+# kubeControllerManager
+kube_controller_manager_size: "{{ kube_controller_manager.size | int }}"
+
+# aggregatedApiServer
+aggregated_api_server_size: "{{ aggregated_api_server.size | int }}"
+
+# agent
+agent_size: "{{ agent.size | int }}"
+
+# descheduler
+descheduler_size: "{{ descheduler.size | int }}"
+
+# scheduler estimator
+scheduler_estimator_size: "{{ scheduler_estimator.size | int }}"
+
+# search
+search_size: "{{ search.size | int }}"
+
+
+
+
+

@@ -1,0 +1,70 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: install-kubeconfig
+  namespace: {{ karmada_namespace }}
+  labels:
+    app.kubernetes.io/managed-by: karmadadeploy
+spec:
+  parallelism: {{ apiserver_size }}
+  completions: {{ apiserver_size }}
+  backoffLimit: 0
+  template:
+    metadata:
+      name: install-kubeconfig
+      labels:
+        app.kubernetes.io/managed-by: karmadadeploy
+    spec:
+      restartPolicy: Never
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/master
+                    operator: In
+                    values:
+                      - ''
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/managed-by: karmadadeploy
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: install-karmada-kubeconfig
+          image: centos:7
+          imagePullPolicy: IfNotPresent
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              bash <<'EOF'
+              set -ex
+              cp /etc/kubeconfig /etc/karmada/
+              echo "{{ karmada_apiserver_ip }}  karmada-apiserver.{{ karmada_namespace }}.svc.{{ cluster_domain }}" >> /tmp/hosts
+              EOF
+          volumeMounts:
+            - name: kubeconfig
+              subPath: kubeconfig
+              mountPath: "/etc/kubeconfig"
+            - name: karmada-apiserver
+              mountPath: "/etc/karmada/"
+            - name: hosts
+              mountPath: "/tmp/hosts"
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: kubeconfig
+        - hostPath:
+            path: "/etc/karmada/"
+            type: DirectoryOrCreate
+          name: karmada-apiserver
+        - hostPath:
+            path: "/etc/hosts"
+            type: File
+          name: hosts
+

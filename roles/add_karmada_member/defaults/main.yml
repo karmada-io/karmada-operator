@@ -1,0 +1,50 @@
+---
+# defaults file for KarmadaDeployment
+# scheduler estimator
+scheduler_estimator_enabled: true
+
+karmada_namespace: "{{ ansible_operator_meta.namespace }}"
+
+# karmada version
+karmada_version: "v1.2.0"
+karmada_aggregated_apiserver_version: "{{ aggregated_api_server.version | default(karmada_version) }}"
+karmada_controller_manager_version: "{{ controller_manager.version | default(karmada_version) }}"
+karmada_descheduler_version: "{{ descheduler.version | default(karmada_version) }}"
+karmada_scheduler_version: "{{ scheduler.version | default(karmada_version) }}"
+karmada_scheduler_estimator_version: "{{ scheduler_estimator.version | default(karmada_version) }}"
+karmada_search_version: "{{ search.version | default(karmada_version) }}"
+karmada_webhook_version: "{{ webhook.version | default(karmada_version) }}"
+
+# kube version
+kube_default_version: "v1.21.7"
+kube_apiserver_version: "{{ api_server.version | default(kube_default_version) }}"
+kube_controller_manager_version: "{{ kube_controller_manager.version | default(kube_default_version) }}"
+
+# karmada image registry
+karmada_image_registry: "{{ karmada_registry | default('swr.ap-southeast-1.myhuaweicloud.com') }}"
+
+# kube image registry
+kube_image_registry: "{{ kube_registry | default('k8s.gcr.io') }}"
+
+# member cluster
+# current cluster name
+current_member_cluster_name: "{% if hostvars[inventory_hostname]['member_cluster_name'] is defined %}{{ hostvars[inventory_hostname]['member_cluster_name'] }}{% endif %}"
+
+# current sync mode
+current_sync_mode: "{% if hostvars[inventory_hostname]['sync_mode'] is defined %}{{ hostvars[inventory_hostname]['sync_mode'] }}{% endif %}"
+
+# secret name
+current_secret_name: "{% if hostvars[inventory_hostname]['secret_name'] is defined %}{{ hostvars[inventory_hostname]['secret_name'] }}{% endif %}"
+
+# kubectl karmada plugin donwload file
+bin_dir: "/usr/local/bin"
+architectures: "amd64"
+karmadactl_download_dir: "/tmp/karmada"
+download_timeout_online: "300"
+karmadactl_download_url: "https://github.com/karmada-io/karmada/releases/download/{{ karmada_version }}/kubectl-karmada-linux-{{ architectures }}.tgz"
+
+# agent
+agent_size: "{{ agent.size | int }}"
+
+# scheduler estimator
+scheduler_estimator_size: "{{ scheduler_estimator.size | int }}"

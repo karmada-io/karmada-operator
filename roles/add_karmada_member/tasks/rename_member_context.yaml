@@ -1,0 +1,58 @@
+---
+- name: Create member directory
+  file:
+    path: "/tmp/member"
+    state: directory
+    mode: 0700
+
+- name: get member cluster kubeconfig secret
+  shell: "kubectl get secret {{ current_secret_name }} -n {{ karmada_namespace }} -o jsonpath='{.data.kubeconfig}' | base64 --decode > /tmp/member/{{ current_member_cluster_name }}"
+
+- name: Get member cluster name
+  command: "{{ bin_dir }}/kubectl config view --output  jsonpath='{.clusters[0].name}' --kubeconfig  /tmp/member/{{ current_member_cluster_name }}"
+  register: member_name
+  changed_when: false
+
+- name: Get member cluster user name
+  command: "{{ bin_dir }}/kubectl config view --output  jsonpath='{.users[0].name}' --kubeconfig /tmp/member/{{ current_member_cluster_name }}"
+  register: member_user
+  changed_when: false
+
+- name: Get member cluster context
+  command: "{{ bin_dir }}/kubectl config current-context --kubeconfig /tmp/member/{{ current_member_cluster_name }}"
+  register: context
+  changed_when: false
+
+- name: Delete context
+  command: "{{ bin_dir }}/kubectl config delete-context {{ context.stdout }} --kubeconfig /tmp/member/{{ current_member_cluster_name }}"
+  changed_when: false
+
+- name: Set context
+  command: "{{ bin_dir }}/kubectl config set-context {{ current_member_cluster_name }} --cluster={{ current_member_cluster_name }} --user=admin --kubeconfig /tmp/member/{{ current_member_cluster_name }}"
+  changed_when: false
+
+- name: Use context
+  command: "{{ bin_dir }}/kubectl config use-context {{ current_member_cluster_name }} --kubeconfig /tmp/member/{{ current_member_cluster_name }}"
+  changed_when: false
+
+- name: reset member cluster name
+  command: "sed -i 's/name: {{ member_name.stdout }}/name: {{ current_member_cluster_name }}/g'  /tmp/member/{{ current_member_cluster_name }}"
+  changed_when: false
+
+- name: reset member cluster user name
+  command: "sed -i 's/- name: {{ member_user.stdout }}/- name: admin/g' /tmp/member/{{ current_member_cluster_name }}"
+  changed_when: false
+
+- name: get member cluster server
+  shell: "{{ bin_dir }}/kubectl config view -o jsonpath='{.clusters[0].cluster.server}' --kubeconfig /tmp/member/{{ current_member_cluster_name }}"
+  register: member_apiserver
+
+- name: Create karmada apiserver config by secret
+  shell: "{{ bin_dir }}/kubectl config current-context --kubeconfig=/tmp/karmada/kubeconfig"  # noqa 301 306 303 305
+  register: karmada_apiserver
+
+- name: Set fact of karmada agent
+  set_fact:
+    karmada_context: "{{ karmada_apiserver.stdout }}"
+    member_cluster_api_endpoint: "{{ member_apiserver.stdout }}"
+    member_cluster_name: "{{ current_member_cluster_name }}"

@@ -1,0 +1,30 @@
+---
+- name: Download karmadactl file
+  get_url:
+    validate_certs: no
+    url: "{{ karmadactl_download_url }}"
+    dest: "{{ local_dir }}/"
+    timeout: "{{ download_timeout_online }}"
+
+- name: Unarchive karmadactl file
+  unarchive:
+    src: "{{ local_dir }}/kubectl-karmada-linux-amd64.tgz"
+    dest: "{{ local_dir }}/"
+    remote_src: yes
+
+- name: Copy karmadactl file
+  copy:
+    src: "{{ local_dir }}/{{ item }}"  # noqa 206
+    dest: "{{ bin_dir }}/"
+    remote_src: yes
+    mode: "0755"
+  with_items:
+    - kubectl-karmada
+
+- name: get join cluster
+  shell: "{{ bin_dir }}/kubectl get cluster {{ current_member_cluster_name }} --no-headers | wc -l"  # noqa 306
+  register: lines
+
+- name: unjoin cluster if it existed
+  command: "{{ bin_dir }}/kubectl-karmada unjoin {{ current_member_cluster_name }} --kubeconfig /tmp/karmada/kubeconfig"
+  when: lines.stdout == '1'

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: karmada-descheduler
+  namespace: {{ karmada_namespace }}
+  labels:
+    app: karmada-descheduler
+spec:
+  replicas: {{ descheduler_size }}
+  selector:
+    matchLabels:
+      app: karmada-descheduler
+  template:
+    metadata:
+      labels:
+        app: karmada-descheduler
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+      containers:
+        - name: karmada-descheduler
+          image: {{ karmada_image_registry }}/karmada/karmada-descheduler:{{ karmada_descheduler_version }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/karmada-descheduler
+            - --kubeconfig=/etc/kubeconfig
+            - --bind-address=0.0.0.0
+            - --v=4
+          volumeMounts:
+            - name: kubeconfig
+              subPath: kubeconfig
+              mountPath: /etc/kubeconfig
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: kubeconfig

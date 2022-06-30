@@ -1,0 +1,150 @@
+---
+- name: Create '{{ karmada_cert_dir }}' tmp directory
+  file:
+    path: "{{ karmada_cert_dir }}"
+    state: directory
+    mode: 0700
+
+- name: Create karmada certificate request configuration
+  template:
+    src: karmada_openssl_conf.j2
+    dest: "{{ karmada_crt_conf_filename }}"
+
+- name: Create karmada-ca root certificate private key
+  shell: openssl genrsa -out {{ karmada_ca_key_filename }} {{ rsa_key_size }}  # noqa 305
+
+- name: Create karmada-ca root certificate
+  shell: >
+    openssl req -x509 -new -nodes
+    -extensions v3_ca -subj "/CN=karmada"
+    -config {{ karmada_crt_conf_filename }}
+    -key {{ karmada_ca_key_filename }}
+    -out {{ karmada_ca_crt_filename }}
+    -days {{ karmada_certs_expired }}
+
+- name: Create front-proxy-ca certificate private key
+  shell: openssl genrsa -out {{ karmada_front_proxy_ca_key_filename }} {{ rsa_key_size }}  # noqa 305
+
+- name: Create front-proxy-ca root certificate
+  shell: >
+    openssl req -x509 -new -nodes
+    -extensions v3_ca -subj "/CN=karmada"
+    -config {{ karmada_crt_conf_filename }}
+    -key {{ karmada_front_proxy_ca_key_filename }}
+    -out {{ karmada_front_proxy_ca_crt_filename }}
+    -days {{ karmada_certs_expired }}
+
+- name: Create apiserver certificate private key
+  shell: openssl genrsa -out {{ karmada_server_key_filename }} {{ rsa_key_size }}  # noqa 305
+
+- name: Create apiserver certificate request
+  shell: >
+    openssl req -new
+    -subj "/CN=kube-apiserver"
+    -key {{ karmada_server_key_filename }}
+    -out {{ karmada_server_csr_filename }}
+
+- name: Create apiserver certificate
+  shell: >
+    openssl x509 -req -CAcreateserial
+    -extensions v3_req_server
+    -extfile {{ karmada_crt_conf_filename }}
+    -CA {{ karmada_ca_crt_filename }}
+    -CAkey {{ karmada_ca_key_filename }}
+    -in {{ karmada_server_csr_filename }}
+    -out {{ karmada_server_crt_filename }}
+    -days {{ karmada_certs_expired }}
+
+- name: Create apiserver-kubelet-client certificate private key
+  shell: openssl genrsa -out {{ karmada_server_kubelet_client_key_filename }} {{ rsa_key_size }}  # noqa 305
+
+- name: Create apiserver-kubelet-client certificate request
+  shell: >
+    openssl req -new
+    -subj "/CN=kube-apiserver-kubelet-client/O=system:masters"
+    -key {{ karmada_server_kubelet_client_key_filename }}
+    -out {{ karmada_server_kubelet_client_csr_filename }}
+
+- name: Create apiserver-kubelet-client certificate
+  shell: >
+    openssl x509 -req -CAcreateserial
+    -extensions v3_req_client
+    -extfile {{ karmada_crt_conf_filename }}
+    -CA {{ karmada_ca_crt_filename }}
+    -CAkey {{ karmada_ca_key_filename }}
+    -in {{ karmada_server_kubelet_client_csr_filename }}
+    -out {{ karmada_server_kubelet_client_crt_filename }}
+    -days {{ karmada_certs_expired }}
+
+- name: Create front-proxy-client certificate private key
+  shell: openssl genrsa -out {{ karmada_front_proxy_client_ca_key_filename }} {{ rsa_key_size }}  # noqa 305
+
+- name: Create front-proxy-client certificate request
+  shell: >
+    openssl req -new
+    -subj "/CN=front-proxy-client"
+    -key {{ karmada_front_proxy_client_ca_key_filename }}
+    -out {{ karmada_front_proxy_client_ca_csr_filename }}
+
+- name: Create front-proxy-client certificate
+  shell: >
+    openssl x509 -req -CAcreateserial
+    -extensions v3_req_client
+    -extfile {{ karmada_crt_conf_filename }}
+    -CA {{ karmada_front_proxy_ca_crt_filename }}
+    -CAkey {{ karmada_front_proxy_ca_key_filename }}
+    -in {{ karmada_front_proxy_client_ca_csr_filename }}
+    -out {{ karmada_front_proxy_client_ca_crt_filename }}
+    -days {{ karmada_certs_expired }}
+
+- name: Create sa certificate private key
+  shell: openssl genrsa -out {{ karmada_sa_key_filename }} {{ rsa_key_size }}  # noqa 305
+
+- name: Generate the public key from the sa private key
+  shell: openssl rsa -in {{ karmada_sa_key_filename }} -pubout -out {{ karmada_sa_pub_filename }}  # noqa 305
+
+- name: link sa certificate private key to kube-controller-manager certificate private key
+  file:
+    src: "{{ karmada_sa_key_filename }}"
+    dest: "{{ karmada_kube_controller_manager_key_filename }}"
+    state: link
+  run_once: true
+
+- name: Create kube-controller-manager certificate request
+  shell: >
+    openssl req -new
+    -subj "/CN=system:kube-controller-manager"
+    -key {{ karmada_sa_key_filename }}
+    -out {{ karmada_kube_controller_manager_csr_filename }}
+
+- name: Create kube-controller-manager certificate
+  shell: >
+    openssl x509 -req -CAcreateserial
+    -extensions v3_req_client
+    -extfile {{ karmada_crt_conf_filename }}
+    -CA {{ karmada_ca_crt_filename }}
+    -CAkey {{ karmada_ca_key_filename }}
+    -in {{ karmada_kube_controller_manager_csr_filename }}
+    -out {{ karmada_kube_controller_manager_crt_filename }}
+    -days {{ karmada_certs_expired }}
+
+- name: Create karmada cluster admin certificate private key
+  shell: openssl genrsa -out {{ karmada_admin_key_filename }} {{ rsa_key_size }}  # noqa 305
+
+- name: Create karmada cluster admin certificate request
+  shell: >
+    openssl req -new
+    -subj "/CN=kubernetes-admin/O=system:masters"
+    -key {{ karmada_admin_key_filename }}
+    -out {{ karmada_admin_csr_filename }}
+
+- name: Create karmada cluster admin certificate
+  shell: >
+    openssl x509 -req -CAcreateserial
+    -extensions v3_req_client
+    -extfile {{ karmada_crt_conf_filename }}
+    -CA {{ karmada_ca_crt_filename }}
+    -CAkey {{ karmada_ca_key_filename }}
+    -in {{ karmada_admin_csr_filename }}
+    -out {{ karmada_admin_crt_filename }}
+    -days {{ karmada_certs_expired }}

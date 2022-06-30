@@ -9,7 +9,7 @@
   - name: set the "{{ etcd_cluster_name }}" resources state=present
     k8s:
       state: "present"
-      definition: "{{ lookup('template', 'ss.yaml') | from_yaml }}"
+      definition: "{{ lookup('template', 'etcd-ss.yaml') | from_yaml }}"
 
   - name: set tls status facts when present
     set_fact:
@@ -23,8 +23,8 @@
     k8s_status:
       api_version: operator.karmada.io/v1alpha1
       kind: KarmadaDeployment
-      name: "{{ etcd_cluster_name }}"
-      namespace: "{{ etcd_namespace }}"
+      name: "{{ karmada_cluster_name }}"
+      namespace: "{{ karmada_namespace }}"
       status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
 
   when: etcd_cluster_phase == "new"
@@ -39,7 +39,7 @@
 - name: set cluster member names
   set_fact:
     etcd_cluster_member_names: "{{ etcd_cluster_member_names + [etcd_cluster_name + '-' + item|string] }}"
-  with_sequence: start={{0}} end={{size - 1}}
+  with_sequence: start={{0}} end={{(etcd_size|int) - 1 |int}}
   when: etcd_cluster_phase == "existing"
 
 - name: get members of cluster when secure client
@@ -63,8 +63,8 @@
 #    k8s_status:
 #      api_version: operator.karmada.io/v1alpha1
 #      kind: KarmadaDeployment
-#      name: "{{ etcd_cluster_name }}"
-#      namespace: "{{ etcd_namespace }}"
+#      name: "{{ karmada_cluster_name }}"
+#      namespace: "{{ karmada_namespace }}"
 #      status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
 
 #  - fail:
@@ -78,12 +78,12 @@
   k8s_status:
     api_version: operator.karmada.io/v1alpha1
     kind: KarmadaDeployment
-    name: "{{ etcd_cluster_name }}"
-    namespace: "{{ etcd_namespace }}"
+    name: "{{ karmada_cluster_name }}"
+    namespace: "{{ karmada_namespace }}"
     status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
   when: etcd_cluster_phase == "existing" and
-        ((etcd_cluster_members|length > (size/2 + 1)) or
-        (etcd_cluster_members|length <= 2 and etcd_cluster_members|length == size))
+        ((etcd_cluster_members|length > ((etcd_size|int)/2 + 1)) or
+        (etcd_cluster_members|length <= 2 and etcd_cluster_members|length == etcd_size|int))
 
 - block:
 
@@ -97,13 +97,13 @@
     k8s_status:
       api_version: operator.karmada.io/v1alpha1
       kind: KarmadaDeployment
-      name: "{{ etcd_cluster_name }}"
-      namespace: "{{ etcd_namespace }}"
+      name: "{{ karmada_cluster_name }}"
+      namespace: "{{ karmada_namespace }}"
       status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
 
-  - name: set new size
+  - name: set new etcd_size
     set_fact:
-      new_etcd_stateful_set: "{{ lookup('template', 'ss.yaml') | from_yaml }}"
+      new_etcd_stateful_set: "{{ lookup('template', 'etcd-ss.yaml') | from_yaml }}"
       scaling: true
     when: etcd_cluster_phase == "existing"
 
@@ -113,17 +113,17 @@
       definition: "{{ new_etcd_stateful_set }}"
     when: etcd_cluster_phase == "existing"
 
-  when: size != etcd_stateful_set[0].spec.replicas
+  when: etcd_size|int != etcd_stateful_set[0].spec.replicas
 
 - block:
 
   - name: get ids of members to be removed
     vars:
-      etcd_remove_members: "{{ (etcd_cluster_members | sort(attribute='name'))[size:] }}"
+      etcd_remove_members: "{{ (etcd_cluster_members | sort(attribute='name'))[(etcd_size|int):] }}"
     include_tasks: remove_members.yaml
     loop: "{{ etcd_remove_members | reverse | list}} "
 
-  when: etcd_cluster_phase == "existing" and (etcd_cluster_members|length|int) > size
+  when: etcd_cluster_phase == "existing" and (etcd_cluster_members|length|int) > etcd_size|int
 
 - name: make sure all the pods are running
   k8s_facts:
@@ -132,16 +132,26 @@
     namespace: "{{ etcd_namespace }}"
     name: "{{ etcd_cluster_name }}"
   register: sts
-  until: sts.get("resources", []) and sts.resources[0].get("status", {}).get("readyReplicas", 0) == size
+  until: sts.get("resources", []) and sts.resources[0].get("status", {}).get("readyReplicas", 0) == etcd_size|int
   retries: 30
   delay: 10
 
-- name: set fact for initial cluster size
-  set_fact:
-    initial_size: "{{ size }}"
+- name: Set status etcd Running
+  vars:
+    etcd_status: "Running"
+  k8s_status:
+    api_version: operator.karmada.io/v1alpha1
+    kind: KarmadaDeployment
+    name: "{{ karmada_cluster_name }}"
+    namespace: "{{ karmada_namespace }}"
+    status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
 
-- name: make new size the initial size
+- name: set fact for initial cluster etcd_size
+  set_fact:
+    initial_size: "{{ etcd_size }}"
+
+- name: make new etcd_size the initial etcd_size
   k8s:
     state: "present"
-    definition: "{{ lookup('template', 'ss.yaml') | from_yaml }}"
+    definition: "{{ lookup('template', 'etcd-ss.yaml') | from_yaml }}"
   when: scaling is defined

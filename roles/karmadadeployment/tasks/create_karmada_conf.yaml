@@ -1,0 +1,53 @@
+---
+- name: Create karmada kubeconfig file on operator
+  shell: >
+    {{ bin_dir }}/kubectl config set-cluster karmada-apiserver
+    --certificate-authority={{ karmada_ca_crt_filename }}
+    --embed-certs=true
+    --server=https://karmada-apiserver.{{ karmada_namespace }}.svc.{{ cluster_domain }}:5443
+    --kubeconfig={{ karmada_config }} &&
+    {{ bin_dir }}/kubectl config set-credentials karmada-apiserver
+    --client-certificate={{ karmada_admin_crt_filename }}
+    --client-key={{ karmada_admin_key_filename }}
+    --embed-certs=true
+    --kubeconfig={{ karmada_config }} &&
+    {{ bin_dir }}/kubectl config set-context karmada-apiserver
+    --cluster=karmada-apiserver
+    --user=karmada-apiserver
+    --kubeconfig={{ karmada_config }} &&
+    {{ bin_dir }}/kubectl config use-context
+    karmada-apiserver
+    --kubeconfig={{ karmada_config }}
+  when: api_server.load_balancer_apiserver_ip == ""
+
+- name: Create karmada kubeconfig file on operator
+  shell: >
+    {{ bin_dir }}/kubectl config set-cluster karmada-apiserver
+    --certificate-authority={{ karmada_ca_crt_filename }}
+    --embed-certs=true
+    --server=https://{{ api_server.load_balancer_apiserver_ip }}:5443
+    --kubeconfig={{ karmada_config }} &&
+    {{ bin_dir }}/kubectl config set-credentials karmada-apiserver
+    --client-certificate={{ karmada_admin_crt_filename }}
+    --client-key={{ karmada_admin_key_filename }}
+    --embed-certs=true
+    --kubeconfig={{ karmada_config }} &&
+    {{ bin_dir }}/kubectl config set-context karmada-apiserver
+    --cluster=karmada-apiserver
+    --user=karmada-apiserver
+    --kubeconfig={{ karmada_config }} &&
+    {{ bin_dir }}/kubectl config use-context
+    karmada-apiserver
+    --kubeconfig={{ karmada_config }}
+  when: api_server.load_balancer_apiserver_ip != ""
+
+#- name: create karmada-apiserver admin kubeconfig on host cluster
+#  k8s:
+#    state: "absent"
+#    definition: "{{ lookup('template', 'karmada_config_job.yaml') | from_yaml }}"
+#  ignore_errors: true
+
+#- name: create karmada-apiserver admin kubeconfig on host cluster
+#  k8s:
+#    state: "present"
+#    definition: "{{ lookup('template', 'karmada_config_job.yaml') | from_yaml }}"

@@ -4,45 +4,11 @@ kind: ClusterRole
 metadata:
   name: manager-role
 rules:
-  ##
-  ## Base operator rules
-  ##
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-      - pods
-      - pods/exec
-      - pods/log
-      - services
-      - endpoints
-      - persistentvolumeclaims
-      - events
-      - configmaps
-      - secrets
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - apps
-    resources:
-      - deployments
-      - daemonsets
-      - replicasets
-      - statefulsets
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
+  - apiGroups: ['*']
+    resources: ['*']
+    verbs: ["get", "watch", "list", "create", "update", "delete", "patch"]
+  - nonResourceURLs: ['*']
+    verbs: ["get"]
   ##
   ## Rules for operator.karmada.io/v1alpha1, Kind: KarmadaDeployment
   ##
@@ -60,4 +26,63 @@ rules:
       - patch
       - update
       - watch
-#+kubebuilder:scaffold:rules
+      #+kubebuilder:scaffold:rules
+
+
+#rules:
+  ##
+  ## Base operator rules
+  ##
+#  - apiGroups:
+      - ""
+#    resources:
+#      - namespaces
+#      - secrets
+#      - pods
+#      - pods/exec
+#      - pods/log
+#      - services
+#      - endpoints
+#      - persistentvolumeclaims
+#      - events
+#      - configmaps
+#      - secrets
+#      - clusterrolebindings
+#      - clusterroles
+#      - serviceaccounts
+#    verbs:
+#      - create
+#      - delete
+#      - get
+#      - list
+#      - patch
+#      - update
+#      - watch
+#  - apiGroups:
+#      - apps
+#    resources:
+#      - deployments
+#      - daemonsets
+#      - replicasets
+#      - statefulsets
+#    verbs:
+#      - create
+#      - delete
+#      - get
+#      - list
+#      - patch
+#      - update
+#      - watch
+#  - apiGroups:
+#      - batch
+#    resources:
+#      - jobs
+#    verbs:
+#      - create
+#      - delete
+#      - get
+#      - list
+#      - patch
+#      - update
+#      - watch
+

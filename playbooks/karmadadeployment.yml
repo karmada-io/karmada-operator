@@ -9,3 +9,22 @@
       when: paused is defined and paused == true
     - import_role:
         name: "karmadadeployment"
+
+- hosts: add-member
+  gather_facts: no
+  collections:
+    - kubernetes.core
+    - operator_sdk.util
+  tasks:
+    - import_role:
+        name: "add_karmada_member"
+
+# todo(riverzhang)
+# - hosts: delete-member
+#  gather_facts: no
+#  collections:
+#    - kubernetes.core
+#    - operator_sdk.util
+#  tasks:
+#    - import_role:
+#        name: "del_karmada-member"

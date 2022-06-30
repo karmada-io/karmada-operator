@@ -1,0 +1,122 @@
+---
+- name: set karmada_cluster_phase
+  set_fact:
+    karmada_cluster_phase: "existing"
+  when: karmada_apiserver_deploy|length > 0
+
+- block:
+
+#  - name: create karmada namespaces on host cluster
+#    k8s:
+#      state: "present"
+#      definition: "{{ lookup('template', 'namespace.yaml') | from_yaml }}"
+
+  - name: create karmada service acconut on host cluster
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'serviceaccount.yaml') | from_yaml }}"
+
+  - name: create karmada clusterrole on host cluster
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'clusterrole.yaml') | from_yaml }}"
+
+  - name: create karmada clusterrole binding on host cluster
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'clusterrolebinding.yaml') | from_yaml }}"
+
+  - name: create karmada apiserver on host cluster
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'karmada-apiserver.yaml') | from_yaml }}"
+
+  - name: Waiting for apiserver to running
+    uri:
+      url: "https://karmada-apiserver.{{ karmada_namespace }}.svc.{{ cluster_domain }}:5443/healthz"
+      validate_certs: no
+    register: apiserver_result
+    until: apiserver_result.status == 200
+    retries: 60
+    delay: 5
+
+  - name: create kube controller manager on host cluster
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'kube-controller-manager.yaml') | from_yaml }}"
+
+  - name: create karmada-search on host cluster
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'karmada-aggregated-apiserver.yaml') | from_yaml }}"
+
+  - name: create aggregated-apiserver on host cluster
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'karmada-search.yaml') | from_yaml }}"
+
+  - name: create namespace karmada-system on karmada apiserver
+    shell: "{{ bin_dir }}/kubectl create ns {{ karmada_namespace }} --kubeconfig={{ karmada_config }}"  # noqa 301 306 303 305
+    ignore_errors: true
+
+  - name: Create '{{ karmada_controlplane_manifests }}' directory
+    file:
+      path: "{{ karmada_controlplane_manifests }}"
+      state: directory
+      mode: 0700
+
+  - name: copy crds to ansilbe operator pod
+    copy:
+      src: "{{ karmada_version }}_crds"
+      dest: "{{ karmada_config_dir }}"
+      mode: 0700
+    run_once: yes
+
+  - name: add ca.crt to crds on operator pod
+    shell: >
+      ca_string=$(cat {{ karmada_ca_crt_filename }} | base64 | tr "\n" " "|sed s/[[:space:]]//g) &&
+      sed -i'' -e "s/k_caB/${ca_string}/g" "{{ karmada_config_dir }}/{{ karmada_version }}_crds/patches/webhook_in_clusterresourcebindings.yaml" &&
+      sed -i'' -e "s/k_caB/${ca_string}/g" "{{ karmada_config_dir }}/{{ karmada_version }}_crds/patches/webhook_in_resourcebindings.yaml"  # noqa 301 303 305 306
+
+  - name: create crds on karmada-apiserver
+    shell: "kubectl --kubeconfig={{ karmada_config }} kustomize {{ karmada_config_dir }}/{{ karmada_version }}_crds | kubectl --kubeconfig={{ karmada_config }} apply -f -"  # noqa 301 303 305 306
+
+  - name: copy webhook-configuration、aggregated-apiserver-apiservice、search-apiservice、cluster-proxy-admin-rbac to operator pod
+    template:
+      src: "{{ item.file }}"
+      dest: "{{ karmada_controlplane_manifests }}/{{ item.file }}"
+    with_items:
+      - { name: webhook, file: webhook-configuration.yaml, type: MutatingWebhookConfiguration }
+      - { name: aa-svc, file: karmada-aggregated-apiserver-apiservice.yaml, type: Service }
+      - { name: ssearch-svc, file: karmada-search-apiservice.yaml, type: Service }
+      - { name: rbac, file: cluster-proxy-admin-rbac.yaml, type: RBAC }
+    register: karmada_manifests
+
+  - name: create webhook-configuration、aggregated-apiserver-apiservice、search-apiservice、cluster-proxy-admin-rbac on karmada apiserver
+    shell: "{{ bin_dir }}/kubectl --kubeconfig={{ karmada_config }} apply -f {{ karmada_controlplane_manifests }}/{{ item.item.file }}"  # noqa 301 306 303 305
+    ignore_errors: true
+    with_items: "{{ karmada_manifests.results }}"
+
+  - name: create controller-manager on host cluster
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'karmada-controller-manager.yaml') | from_yaml }}"
+
+  - name: create scheduler on host cluster
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'karmada-scheduler.yaml') | from_yaml }}"
+
+  - name: create descheduler on host cluster
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'karmada-descheduler.yaml') | from_yaml }}"
+
+  - name: create webhook on host cluster
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'karmada-webhook.yaml') | from_yaml }}"
+
+  when: karmada_cluster_phase == "new"
+
+# logic for scale、upgrade

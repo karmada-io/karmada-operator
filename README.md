@@ -2,7 +2,7 @@
 
 Karmada operator for Kubernetes built with Operator SDK and Ansible.This operator is meant to provide a more
 Kubernetes-native installation method for Kamrada via a Karmada Custom Resource Definition (CRD). And Karmada-operator 
-is an operator which runs as a service on top of Kubernetes.The Karmada-operator servicecan be used to provision and
+is an operator which runs as a service on top of Kubernetes.The Karmada-operator service can be used to provision and
 perform initial configuration of karmada.
 
 For provisioning Karmada,the karmada-operator will use the current deployment tool.
@@ -25,7 +25,6 @@ make docker-build docker-push IMG=example.com/karmada-operator:v0.0.1
 Deploy the karmada-operator:
 
 ```sh
-make install
 make deploy IMG=example.com/karmada-operator:v0.0.1
 ```
 
@@ -43,6 +42,41 @@ Uninstall the operator:
  make undeploy
 ```
 
+## Create members cluster secret.yaml, example:
+```YAML
+apiVersion: v1
+stringData:
+  kubeconfig: |-
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: XXXXXXX
+        server: https://145.40.9.21:6443
+      name: cluster.local
+    contexts:
+    - context:
+        cluster: cluster.local
+        user: kubernetes-admin
+      name: kubernetes-admin@cluster.local
+    current-context: kubernetes-admin@cluster.local
+    kind: Config
+    preferences: {}
+    users:
+    - name: kubernetes-admin
+      user:
+        client-certificate-data: XXXXXX
+        client-key-data: XXXXXXX
+kind: Secret
+metadata:
+  name: member1-config
+  namespace: karmada-system
+```
+Create the secret: 
+
+```sh
+kubectl apply -f secret.yaml
+```
+
 ## Create a KarmadaDeployment CR
 
 Update the sample KarmadaDeployment CR manifest at `config/samples/operator_v1alpha1_karmadadeployment.yaml` and define the `spec` as the following:
@@ -52,9 +86,67 @@ apiVersion: operator.karmada.io/v1alpha1
 kind: KarmadaDeployment
 metadata:
   name: karmadadeployment-sample
+  namespace: karmada-system
 spec:
-  size: 3
-  version: "3.4.9"
+  karmadaRegistry: "swr.ap-southeast-1.myhuaweicloud.com"
+  kubeRegistry: "k8s.gcr.io"
+  clusterDomain: "cluster.local"
+  etcd:
+     size: 3
+     version: "3.4.9"
+     pvc:
+       # etcd.pvc.storageClass storageClass name of PVC
+       storageClass: "local-path"
+       # etcd.pvc.size size of PVC
+       size: "1Gi"
+     # "pvc" means using volumeClaimTemplates
+     # "hostPath" means using hostPath
+     storageType: "pvc"
+  scheduler:
+      size: 1
+      version: "v1.2.0"
+  webhook:
+      size: 1
+      version: "v1.2.0"
+  controllerManager:
+    size: 1
+    version: "v1.2.0"
+  apiServer:
+    size: 1
+    version: "v1.21.7"
+    ## "LoadBalancer" means using LoadBalancer
+    ## "ClusterIP" means using ClusterIP
+    ## "NodePort" means using NodePort
+    serviceType: "ClusterIP"
+    ## if loadBalancerApiserverIp is define,
+    ## and ip is not none
+    ## we will use external lb vip
+    loadBalancerApiserverIp: ""
+  aggregatedApiServer:
+    size: 1
+    version: "v1.2.0"
+  kubeControllerManager:
+    size: 1
+    version: "v1.21.7"
+  agent:
+    size: 2
+    version: "v1.2.0"
+  descheduler:
+    size: 1
+    version: "v1.2.0"
+  search:
+    size: 1
+    version: "v1.2.0"
+  schedulerEstimator:
+    size: 1
+    version: "v1.2.0"
+  members:
+    - name: "member1"
+      syncMode: "push"
+      kubeConfigSecretName: "member1-config"
+    - name: "member2"
+      syncMode: "pull"
+      kubeConfigSecretName: "member2-config"
 ```
 
 Create the CR:
@@ -66,19 +158,46 @@ kubectl apply -f config/samples/operator_v1alpha1_karmadadeployment.yaml
 Ensure that the karmada operator creates the deployment for the sample CR with the correct size:
 
 ```console
-$ kubectl get deployment
-NAME                                    READY   UP-TO-DATE   AVAILABLE   AGE
+$kubectl get deploy -n karmada-system
+NAME                                 READY   STATUS     RESTARTS       AGE
+karmada-aggregated-apiserver          1/1     1            1           2m50s
+karmada-apiserver                     1/1     1            1           2m53s
+karmada-controller-manager            1/1     1            1           2m14s
+karmada-descheduler                   1/1     1            1           2m11s
+karmada-kube-controller-manager       1/1     1            1           2m52s
+karmada-scheduler                     1/1     1            1           2m13s
+karmada-scheduler-estimator-member1   2/2     2            2           108s
+karmada-webhook                       1/1     1            1           2m10s
+
 ```
 
 Check the pods and CR status to confirm the status is updated with the karmada pod names:
 
 ```console
-$ kubectl get pods
-NAME                                  READY     STATUS    RESTARTS   AGE
+$ kubectl get pods -n karmada-system
+NAME                                                  READY   STATUS    RESTARTS   AGE
+karmada-aggregated-apiserver-74c4bd9976-c7r2b          1/1     Running   0          96s
+karmada-apiserver-65f5fd7fbf-q4hbz                     1/1     Running   0          99s
+karmada-controller-manager-7b6576dcff-mt4t2            1/1     Running   0          60s
+karmada-descheduler-65c75d4448-fjw9b                   1/1     Running   0          57s
+karmada-kube-controller-manager-7bfff8589f-tgcfh       1/1     Running   0          98s
+karmada-scheduler-5f7796487b-7wnbr                     1/1     Running   0          59s
+karmada-scheduler-estimator-member1-6f48c5df7b-56xdj   1/1     Running   0          34s
+karmada-scheduler-estimator-member1-6f48c5df7b-pnlq2   1/1     Running   0          34s
+karmada-webhook-596df4d86c-hb8fg                       1/1     Running   0          56s
+karmadadeployment-sample-etcd-0                        1/1     Running   0          2m29s
+karmadadeployment-sample-etcd-1                        1/1     Running   0          2m26s
+karmadadeployment-sample-etcd-2                        1/1     Running   0          2m23s
 ```
 
 ```console
 $ kubectl get karmadadeployment/karmadadeployment-sample -o yaml
+```
+
+```console
+$ kubectl get cluster --kubeconfig /etc/karmada/kubeconfig
+NAME      VERSION   MODE   READY   AGE
+member1   v1.21.6   Push   True    2min
 ```
 
 ## Cleanup

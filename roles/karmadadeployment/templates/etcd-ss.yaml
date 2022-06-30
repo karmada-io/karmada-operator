@@ -7,7 +7,7 @@ spec:
   serviceName: {{ etcd_cluster_name }}
   # changing replicas value will require a manual etcdctl member remove/add
   # command (remove before decreasing and add after increasing)
-  replicas: {{ size }}
+  replicas: {{ etcd_size }}
   #  updateStrategy:
   #    type: "RollingUpdate"
   #    rollingUpdate:
@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
       - name: "etcd"
-        image: {{ image }}
+        image: {{ etcd_image }}
         # readinessProbe:
         #  exec:
         #    command:
@@ -55,7 +55,7 @@ spec:
           name: peer
         env:
         - name: INITIAL_CLUSTER_SIZE
-          value: "{{ initial_size | default(size)}}"
+          value: "{{ initial_size | default(etcd_size) }}"
         - name: CLUSTER_NAME
           value: "{{ etcd_cluster_name }}"
         - name: ETCDCTL_API
@@ -190,7 +190,7 @@ spec:
               --listen-peer-urls http$(if $SECURE_PEER; then echo "s"; fi)://0.0.0.0:2380 \
               --listen-client-urls http$(if $SECURE_CLIENT; then echo "s"; fi)://0.0.0.0:2379 \
               --advertise-client-urls http$(if $SECURE_CLIENT; then echo "s"; fi)://${HOSTNAME}.${CLUSTER_NAME}.{{ etcd_namespace }}.svc.cluster.local:2379 \
-              --initial-cluster-token {{ ansible_operator_meta.name }} \
+              --initial-cluster-token {{ etcd_cluster_name }} \
               --initial-cluster ${PEERS} \
               --initial-cluster-state new \
               --data-dir /var/run/etcd/default.etcd \
@@ -212,12 +212,22 @@ spec:
       - name: "etcd-client-tls"
         secret:
           secretName: {{ etcd_client_secret_name }}
+{% if etcd_storage_type == "hostPath" %}
+      - hostPath:
+          path: /var/lib/{{ etcd_namespace }}/karmada-etcd
+          type: DirectoryOrCreate
+        name: data
+{% endif %}
+{% if etcd_storage_type == "pvc" %}
   volumeClaimTemplates:
   - metadata:
       name: data
     spec:
       accessModes:
       - "ReadWriteOnce"
+      storageClassName: {{ etcd_pvc_storage_class }}
       resources:
         requests:
-          storage: 1Gi
+          storage: {{ etcd_pvc_size }}
+{% endif %}
+

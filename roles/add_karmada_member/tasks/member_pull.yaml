@@ -1,0 +1,24 @@
+---
+- name: Create Karmada agent directory
+  file: name=/tmp/addons/agent state=directory
+
+- name: Lay down Karmada agent template
+  template:
+    src: "{{ item.file }}"
+    dest: "/tmp/addons/agent/{{ item.file }}"
+  with_items:
+    - { name: ns, file: namespace.yaml, type: namespace }
+    - { name: cr, file: clusterrole.yaml, type: clusterrole }
+    - { name: crb, file: clusterrolebinding.yaml, type: clusterrolebinding }
+    - { name: sa, file: serviceaccount.yaml, type: sa }
+    - { name: deploy, file: karmada-agent.yaml, type: deployment }
+  register: karmada_agent_manifests
+
+- name: Start karmada Agent
+  shell: "{{ bin_dir }}/kubectl apply -f /tmp/addons/agent/{{ item.item.file }} --kubeconfig /tmp/member/{{ current_member_cluster_name }}"  # noqa 301 306 303 305
+  ignore_errors: true
+  with_items: "{{ karmada_agent_manifests.results }}"
+
+- name: Create karmada apiserver config by secret
+  shell: "{{ bin_dir }}/kubectl create secret generic karmada-kubeconfig --from-file=karmada-kubeconfig=/tmp/karmada/kubeconfig -n {{ karmada_namespace }}"  # noqa 301 306 303 305
+  ignore_errors: true

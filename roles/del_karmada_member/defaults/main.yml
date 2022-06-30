@@ -1,0 +1,6 @@
+---
+# current cluster name
+current_member_cluster_name: "{% if hostvars[inventory_hostname]['member_cluster_name'] is defined %}{{ hostvars[inventory_hostname]['member_cluster_name'] }}{% endif %}"
+
+# current sync mode
+current_sync_mode: "{% if hostvars[inventory_hostname]['sync_mode'] is defined %}{{ hostvars[inventory_hostname]['sync_mode'] }}{% endif %}"

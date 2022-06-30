@@ -2,6 +2,64 @@ apiVersion: operator.karmada.io/v1alpha1
 kind: KarmadaDeployment
 metadata:
   name: karmadadeployment-sample
+  namespace: karmada-system
 spec:
-  size: 3
-  version: "3.4.9"
+  karmadaRegistry: "swr.ap-southeast-1.myhuaweicloud.com"
+  kubeRegistry: "k8s.gcr.io"
+  clusterDomain: "cluster.local"
+  etcd:
+     size: 3
+     version: "3.4.9"
+     pvc:
+       # etcd.pvc.storageClass storageClass name of PVC
+       storageClass: "local-path"
+       # etcd.pvc.size size of PVC
+       size: "1Gi"
+     # "pvc" means using volumeClaimTemplates
+     # "hostPath" means using hostPath
+     storageType: "pvc"
+  scheduler:
+      size: 1
+      version: "v1.2.0"
+  webhook:
+      size: 1
+      version: "v1.2.0"
+  controllerManager:
+    size: 1
+    version: "v1.2.0"
+  apiServer:
+    size: 1
+    version: "v1.21.7"
+    ## "LoadBalancer" means using LoadBalancer
+    ## "ClusterIP" means using ClusterIP
+    ## "NodePort" means using NodePort
+    serviceType: "ClusterIP"
+    ## if loadBalancerApiserverIp is define,
+    ## and ip is not none
+    ## we will use external lb vip
+    loadBalancerApiserverIp: ""
+  aggregatedApiServer:
+    size: 1
+    version: "v1.2.0"
+  kubeControllerManager:
+    size: 1
+    version: "v1.21.7"
+  agent:
+    size: 2
+    version: "v1.2.0"
+  descheduler:
+    size: 1
+    version: "v1.2.0"
+  search:
+    size: 1
+    version: "v1.2.0"
+  schedulerEstimator:
+    size: 1
+    version: "v1.2.0"
+  members:
+    - name: "member1"
+      syncMode: "push"
+      kubeConfigSecretName: "member1-config"
+    - name: "member2"
+      syncMode: "pull"
+      kubeConfigSecretName: "member2-config"

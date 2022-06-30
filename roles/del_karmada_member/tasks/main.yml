@@ -1,0 +1,10 @@
+---
+# push mode uninstall
+- block:
+    - include_tasks: member_push_unjoin.yml
+  when: 'current_sync_mode == "push"'
+
+# pull mode uninstall
+- block:
+    - include_tasks: member_pull_unjoin.yml
+  when: 'current_sync_mode == "pull"'

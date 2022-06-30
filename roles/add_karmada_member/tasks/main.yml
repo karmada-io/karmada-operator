@@ -1,0 +1,16 @@
+---
+# rename context
+- include_tasks: rename_member_context.yaml
+
+# push mode install
+- block:
+    - include_tasks: member_push.yaml
+  when: 'current_sync_mode == "push"'
+
+# pull mode install
+- block:
+    - include_tasks: member_pull.yaml
+  when: 'current_sync_mode == "pull"'
+
+# install scheduler estimator
+- include_tasks: install_estimator.yaml

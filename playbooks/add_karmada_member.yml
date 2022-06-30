@@ -1,0 +1,6 @@
+---
+- hosts: add-member
+  tasks:
+    - debug: msg="Running Playbook for add member to karmada control plane"
+    - import_role:
+        name: "add_karmada_member"

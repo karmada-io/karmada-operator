@@ -29,12 +29,12 @@
     path: "{{ etcd_cert_dir }}"
   register: stat_result
 
-- name: Generate tls certs
-  include: create_etcd_certs.yaml
+- name: Generate etcd tls certs
+  include_tasks: create_etcd_certs.yaml
   when: (stat_result.stat.exists == False and etcd_client_secret|length==0)
 
-- name: Create secrets for certs
-  include: create_etcd_secrets.yaml
+- name: Create etcd secrets for certs
+  include_tasks: create_etcd_secrets.yaml
   when: etcd_client_secret|length==0
 
 - name: Check if cert temp dir '{{ etcd_tls_directory }}' exists
@@ -46,8 +46,27 @@
 #  include_tasks: create_operator_certs.yaml
 
 - name: Create services if it does not exist
-  include_tasks: create_etcd_services.yml
+  include_tasks: create_etcd_services.yaml
   when: (etcd_cluster_services|length==0)
 
 - name: Reconcile etcd pods
-  include_tasks: reconcile_pods.yaml
+  include_tasks: reconcile_etcd_pods.yaml
+
+- name: Check if cert temp dir '{{ karmada_cert_dir }}' exists
+  stat:
+    path: "{{ karmada_cert_dir }}"
+  register: karmada_stat_result
+
+- name: Generate karmada tls certs
+  include_tasks: create_karmada_certs.yaml
+  when: (karmada_stat_result.stat.exists == False and karmada_client_secret|length==0)
+
+- name: Create karmada secrets for certs
+  include_tasks: create_karmada_secrets.yaml
+  when: karmada_client_secret|length==0
+
+- name: Create karmada admin conf
+  include_tasks: create_karmada_conf.yaml
+
+- name: Reconcile karmada controlplane
+  include_tasks: reconcile_karmada_controlplane.yaml

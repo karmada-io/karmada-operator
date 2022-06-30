@@ -1,0 +1,6 @@
+---
+- hosts: del-member
+  tasks:
+    - debug: msg="Running Playbook for delete member from karmada control plane"
+    - import_role:
+        name: "del_karmada_member"
