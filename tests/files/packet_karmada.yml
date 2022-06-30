@@ -1,0 +1,5 @@
+---
+# Instance settings
+cloud_image: centos-7
+
+# Karmada installer settings

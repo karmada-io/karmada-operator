@@ -1,0 +1,30 @@
+
+- name: remove member when secure client
+  etcd_member:
+    state: "absent"
+    type: "member"
+    cluster_host: "{{ etcd_cluster_name + '-client.' + etcd_namespace + '.svc'}}"
+    cluster_port: "{{ etcd_client_port }}"
+    id: "{{ item.id }}"
+    ca_cert: "{{ etcd_tls_directory }}/etcd-ca.crt"
+    cert_cert: "{{ etcd_tls_directory }}/etcd-client.crt"
+    cert_key: "{{ etcd_tls_directory }}/etcd-client.key"
+
+- name: delete the pvc
+  k8s:
+    state: absent
+    api_version: v1
+    kind: PersistentVolumeClaim
+    name: "data-{{ item.name }}"
+    namespace: "{{ ansible_operator_meta.namespace }}"
+
+- name: delete the pod if present
+  k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    name: "{{ item.name }}"
+    namespace: "{{ ansible_operator_meta.namespace }}"
+
+- pause:
+    seconds: 1

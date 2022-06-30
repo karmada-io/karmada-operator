@@ -1,0 +1,86 @@
+---
+- name: Create '{{ etcd_cert_dir }}' tmp directory
+  file:
+    path: "{{ etcd_cert_dir }}"
+    state: directory
+    mode: 0700
+
+- name: Create etcd certificate request configuration file
+  template:
+    src: etcd_openssl_conf.j2
+    dest: "{{ etcd_crt_conf_filename }}"
+
+- name: Create etcd-ca root certificate private key
+  shell: openssl genrsa -out {{ etcd_ca_key_filename }} {{ rsa_key_size }}  # noqa 305
+
+- name: Create etcd-ca root certificate
+  shell: >
+    openssl req -x509 -new -nodes -extensions v3_ca
+    -subj "/CN=karmada"
+    -config {{ etcd_crt_conf_filename }}
+    -key {{ etcd_ca_key_filename }}
+    -out {{ etcd_ca_crt_filename }}
+    -days {{ etcd_certs_expired }}
+
+- name: Create etcd-server certificate private key
+  shell: openssl genrsa -out {{ etcd_server_key_filename }} {{ rsa_key_size }}  # noqa 305
+
+- name: Create etcd-server certificate request
+  shell: >
+    openssl req -new
+    -subj "/CN=server"
+    -key {{ etcd_server_key_filename }}
+    -out {{ etcd_server_csr_filename }}
+
+- name: Create etcd-server certificate
+  shell: >
+    openssl x509 -req -CAcreateserial
+    -extensions v3_req_peer
+    -extfile {{ etcd_crt_conf_filename }}
+    -CA {{ etcd_ca_crt_filename }}
+    -CAkey {{ etcd_ca_key_filename }}
+    -in {{ etcd_server_csr_filename }}
+    -out {{ etcd_server_crt_filename }}
+    -days {{ etcd_certs_expired }}
+
+- name: Create etcd-peer certificate private key
+  shell: openssl genrsa -out {{ etcd_peer_key_filename }} {{ rsa_key_size }}  # noqa 305
+
+- name: Create etcd-peer certificate request
+  shell: >
+    openssl req -new
+    -subj "/CN=peer"
+    -key {{ etcd_peer_key_filename }}
+    -out {{ etcd_peer_csr_filename }}
+
+- name: Create etcd-peer certificate
+  shell: >
+    openssl x509 -req -CAcreateserial
+    -extensions v3_req_peer
+    -extfile {{ etcd_crt_conf_filename }}
+    -CA {{ etcd_ca_crt_filename }}
+    -CAkey {{ etcd_ca_key_filename }}
+    -in {{ etcd_peer_csr_filename }}
+    -out {{ etcd_peer_crt_filename }}
+    -days {{ etcd_certs_expired }}
+
+- name: Create apiserver-etcd-client certificate private key
+  shell: openssl genrsa -out {{ etcd_client_key_filename }} {{ rsa_key_size }}  # noqa 305
+
+- name: Create apiserver-etcd-client certificate request
+  shell: >
+    openssl req -new
+    -subj "/CN=kube-apiserver-etcd-client/O=system:masters"
+    -key {{ etcd_client_key_filename }}
+    -out  {{ etcd_client_csr_filename }}
+
+- name: Create apiserver-etcd-client certificate
+  shell: >
+    openssl x509 -req -CAcreateserial
+    -extensions v3_req_client
+    -extfile {{ etcd_crt_conf_filename }}
+    -CA {{ etcd_ca_crt_filename }}
+    -CAkey {{ etcd_ca_key_filename }}
+    -in {{ etcd_client_csr_filename }}
+    -out {{ etcd_client_crt_filename }}
+    -days {{ etcd_certs_expired }}

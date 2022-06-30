@@ -1,0 +1,53 @@
+---
+# tasks file for KarmadaDeployment
+- block:
+    - name: Set status when cluster is available
+      vars:
+        etcd_status: Unknown
+        control_paused: true
+        version: ""
+        etcd_cluster_members: []
+        etcd_cluster_member_names: []
+        size: ""
+      k8s_status:
+        api_version: operator.karmada.io/v1alpha1
+        kind: KarmadaDeployment
+        name: "{{ etcd_cluster_name }}"
+        namespace: "{{ etcd_namespace }}"
+        status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
+
+    - name: "end play if nothing spec.pause is true"
+      debug:
+        msg: "skipping reconciliation"
+
+    - meta: end_play
+
+  when: pause is defined and pause == true
+
+- name: Check if cert temp dir '{{ etcd_cert_dir }}' exists
+  stat:
+    path: "{{ etcd_cert_dir }}"
+  register: stat_result
+
+- name: Generate tls certs
+  include: create_etcd_certs.yaml
+  when: (stat_result.stat.exists == False and etcd_client_secret|length==0)
+
+- name: Create secrets for certs
+  include: create_etcd_secrets.yaml
+  when: etcd_client_secret|length==0
+
+- name: Check if cert temp dir '{{ etcd_tls_directory }}' exists
+  stat:
+    path: "{{ etcd_tls_directory }}"
+  register: tls_stat_result
+
+#- name: Create operator certs on secure client
+#  include_tasks: create_operator_certs.yaml
+
+- name: Create services if it does not exist
+  include_tasks: create_etcd_services.yml
+  when: (etcd_cluster_services|length==0)
+
+- name: Reconcile etcd pods
+  include_tasks: reconcile_pods.yaml

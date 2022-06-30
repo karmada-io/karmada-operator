@@ -1,0 +1,20 @@
+# permissions for end users to view karmadadeployments.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: karmadadeployment-viewer-role
+rules:
+- apiGroups:
+  - operator.karmada.io
+  resources:
+  - karmadadeployments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - operator.karmada.io
+  resources:
+  - karmadadeployments/status
+  verbs:
+  - get

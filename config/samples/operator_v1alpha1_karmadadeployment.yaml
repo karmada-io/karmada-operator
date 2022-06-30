@@ -1,0 +1,7 @@
+apiVersion: operator.karmada.io/v1alpha1
+kind: KarmadaDeployment
+metadata:
+  name: karmadadeployment-sample
+spec:
+  size: 3
+  version: "3.4.9"

@@ -1,0 +1,80 @@
+---
+# defaults file for KarmadaDeployment
+
+image: "{{ 'quay.io/coreos/etcd:v' + version | string }}"
+etcd_namespace: "{{ ansible_operator_meta.namespace }}"
+etcd_cluster_name: "{{ ansible_operator_meta.name }}"
+etcd_client_port: 2379
+etcd_peer_port: 2380
+etcd_app_label: "etcd"
+etcd_volume_mounts:
+- name: "etcd-data"
+  mountPath: "/var/etcd"
+etcd_volumes:
+- name: "etcd-data"
+  source:
+    emptyDir: {}
+
+etcd_cluster_services: "{{ q('k8s', api_version='v1', kind='Service', namespace=etcd_namespace,
+                             label_selector='etcd_cluster='+ etcd_cluster_name + ',app=' + etcd_app_label) }}"
+
+etcd_cluster_pods: "{{ q('k8s', api_version='v1', kind='Pod', namespace=etcd_namespace,
+                                               label_selector='etcd_cluster='+ etcd_cluster_name + ',app=' + etcd_app_label) }}"
+
+etcd_stateful_set: "{{ q('k8s', api_version='apps/v1', kind='StatefulSet', namespace=etcd_namespace, resource_name=etcd_cluster_name) }}"
+
+etcd_client_secret: "{{ q('k8s', api_version='v1', kind='Secret', namespace=etcd_namespace, resource_name=etcd_client_secret_name) }}"
+
+etcd_new_members: []
+etcd_remove_members: []
+etcd_peer_urls: []
+etcd_new_peer_urls: []
+etcd_cluster_phase: "new"
+etcd_peer_protocol: "http://"
+etcd_client_protocol: "http://"
+etcd_peer_tls_dir: "/etc/etcdtls/member/peer-tls"
+etcd_server_tls_dir: "/etc/etcdtls/member/server-tls"
+etcd_peer_tls_commands: []
+etcd_client_tls_commands: []
+
+etcd_member_size: 0
+etcd_cluster_members: []
+etcd_remove_pods: []
+etcd_valid_member_ids: []
+etcd_cluster_member_names: []
+
+
+state: "present"
+tls_secret_name: "{{ ansible_operator_meta.name }}-{{ etcd_client_secret_name }}"
+etcd_client_secret_name: "etcd-client-tls"
+etcd_peer_secret_name: "etcd-peer-tls"
+etcd_server_secret_name: "etcd-server-tls"
+
+rsa_key_size: 2048
+cert_common_name: "karmada"
+cert_org: "karmada.io"
+cert_domain: "cluster.local"
+
+etcd_certs_expired: "3650"
+etcd_cert_dir: "/tmp/etcd_certs/{{etcd_cluster_name}}"
+etcd_tls_directory: "/tmp/etcdtls/{{etcd_cluster_name}}"
+
+
+# OpenSSL Conf
+etcd_crt_conf_filename: "{{ etcd_cert_dir }}/etcd_openssl.conf"
+
+# Etcd Certs
+etcd_ca_crt_filename: "{{ etcd_cert_dir }}/ca.crt"
+etcd_ca_key_filename: "{{ etcd_cert_dir }}/ca.key"
+
+etcd_peer_crt_filename: "{{ etcd_cert_dir }}/peer.crt"
+etcd_peer_csr_filename: "{{ etcd_cert_dir }}/peer.csr"
+etcd_peer_key_filename: "{{ etcd_cert_dir }}/peer.key"
+
+etcd_client_crt_filename: "{{ etcd_cert_dir }}/etcd_client.crt"
+etcd_client_csr_filename: "{{ etcd_cert_dir }}/etcd_client.csr"
+etcd_client_key_filename: "{{ etcd_cert_dir }}/etcd_client.key"
+
+etcd_server_crt_filename: "{{ etcd_cert_dir }}/server.crt"
+etcd_server_csr_filename: "{{ etcd_cert_dir }}/server.csr"
+etcd_server_key_filename: "{{ etcd_cert_dir }}/server.key"

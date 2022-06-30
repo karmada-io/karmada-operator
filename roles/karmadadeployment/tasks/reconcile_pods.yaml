@@ -1,0 +1,147 @@
+---
+- name: set etcd_cluster_phase
+  set_fact:
+    etcd_cluster_phase: "existing"
+  when: etcd_stateful_set|length > 0
+
+- block:
+
+  - name: set the "{{ etcd_cluster_name }}" resources state=present
+    k8s:
+      state: "present"
+      definition: "{{ lookup('template', 'ss.yaml') | from_yaml }}"
+
+  - name: set tls status facts when present
+    set_fact:
+      peer_tls_secret: "{{ etcd_peer_secret_name }}"
+      server_tls_secret: "{{ etcd_server_secret_name }}"
+      operator_tls_secret: "{{ tls_secret_name }}"
+
+  - name: set cluster status when new
+    vars:
+      etcd_status: "Creating"
+    k8s_status:
+      api_version: operator.karmada.io/v1alpha1
+      kind: KarmadaDeployment
+      name: "{{ etcd_cluster_name }}"
+      namespace: "{{ etcd_namespace }}"
+      status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
+
+  when: etcd_cluster_phase == "new"
+
+- name: set TLS status variables when present
+  set_fact:
+    peer_tls_secret: "{{ etcd_stateful_set[0].get('status', {}).get('peerTLSSecret', '') }}"
+    server_tls_secret: "{{ etcd_stateful_set[0].get('status', {}).get('serverTLSSecret', '') }}"
+    operator_tls_secret: "{{ etcd_stateful_set[0].get('status', {}).get('operatorTLSSecret', '') }}"
+  when: etcd_cluster_phase == "existing"
+
+- name: set cluster member names
+  set_fact:
+    etcd_cluster_member_names: "{{ etcd_cluster_member_names + [etcd_cluster_name + '-' + item|string] }}"
+  with_sequence: start={{0}} end={{size - 1}}
+  when: etcd_cluster_phase == "existing"
+
+- name: get members of cluster when secure client
+  vars:
+    members: "{{ q('etcd_member', cluster_host= etcd_cluster_name + '-client.' + etcd_namespace + '.svc',
+                  cluster_port=etcd_client_port,
+                  ca_cert=etcd_tls_directory + '/etcd-ca.crt',
+                  cert_cert=etcd_tls_directory + '/etcd-client.crt',
+                  cert_key=etcd_tls_directory + '/etcd-client.key') }}"
+  set_fact:
+    etcd_cluster_members: "{{ members }}"
+  when: (etcd_cluster_phase == "existing")
+  ignore_errors: yes
+
+# - block:
+
+#  - name: Set status and exit when cluster is unavailable
+#    vars:
+#      etcd_status: "Unavailable"
+#      etcd_status_reason: "Etcd is trying to establish quorum"
+#    k8s_status:
+#      api_version: operator.karmada.io/v1alpha1
+#      kind: KarmadaDeployment
+#      name: "{{ etcd_cluster_name }}"
+#      namespace: "{{ etcd_namespace }}"
+#      status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
+
+#  - fail:
+#      msg: cluster is unavailable
+
+#  when: etcd_cluster_phase == "existing" and etcd_cluster_members|length <= (etcd_stateful_set[0].spec.replicas/2)
+
+- name: Set status when cluster is available
+  vars:
+    etcd_status: Available
+  k8s_status:
+    api_version: operator.karmada.io/v1alpha1
+    kind: KarmadaDeployment
+    name: "{{ etcd_cluster_name }}"
+    namespace: "{{ etcd_namespace }}"
+    status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
+  when: etcd_cluster_phase == "existing" and
+        ((etcd_cluster_members|length > (size/2 + 1)) or
+        (etcd_cluster_members|length <= 2 and etcd_cluster_members|length == size))
+
+- block:
+
+  - name: Change initial_size if Scaling
+    set_fact:
+      initial_size: "{{ etcd_stateful_set[0].spec.replicas }}"
+
+  - name: Set status when Scaling
+    vars:
+      etcd_status: Scaling
+    k8s_status:
+      api_version: operator.karmada.io/v1alpha1
+      kind: KarmadaDeployment
+      name: "{{ etcd_cluster_name }}"
+      namespace: "{{ etcd_namespace }}"
+      status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
+
+  - name: set new size
+    set_fact:
+      new_etcd_stateful_set: "{{ lookup('template', 'ss.yaml') | from_yaml }}"
+      scaling: true
+    when: etcd_cluster_phase == "existing"
+
+  - name: patch the "{{ etcd_cluster_name }}" resources
+    k8s:
+      state: "present"
+      definition: "{{ new_etcd_stateful_set }}"
+    when: etcd_cluster_phase == "existing"
+
+  when: size != etcd_stateful_set[0].spec.replicas
+
+- block:
+
+  - name: get ids of members to be removed
+    vars:
+      etcd_remove_members: "{{ (etcd_cluster_members | sort(attribute='name'))[size:] }}"
+    include_tasks: remove_members.yaml
+    loop: "{{ etcd_remove_members | reverse | list}} "
+
+  when: etcd_cluster_phase == "existing" and (etcd_cluster_members|length|int) > size
+
+- name: make sure all the pods are running
+  k8s_facts:
+    kind: StatefulSet
+    api_version: apps/v1
+    namespace: "{{ etcd_namespace }}"
+    name: "{{ etcd_cluster_name }}"
+  register: sts
+  until: sts.get("resources", []) and sts.resources[0].get("status", {}).get("readyReplicas", 0) == size
+  retries: 30
+  delay: 10
+
+- name: set fact for initial cluster size
+  set_fact:
+    initial_size: "{{ size }}"
+
+- name: make new size the initial size
+  k8s:
+    state: "present"
+    definition: "{{ lookup('template', 'ss.yaml') | from_yaml }}"
+  when: scaling is defined

@@ -1,0 +1,47 @@
+[ req ]
+default_bits = 2048
+default_md = sha256
+distinguished_name = req_distinguished_name
+
+[req_distinguished_name]
+
+[ v3_ca ]
+basicConstraints = critical, CA:TRUE
+keyUsage = critical, digitalSignature, keyEncipherment, keyCertSign
+
+[ v3_req_server ]
+basicConstraints = CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+
+[ v3_req_client ]
+basicConstraints = CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth
+
+[ v3_req_peer ]
+basicConstraints = CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth
+subjectAltName = @alt_names_etcd
+
+[ alt_names_etcd ]
+DNS.1 = localhost
+DNS.2 = kubernetes.default.svc
+DNS.3 = {{ etcd_cluster_name }}
+DNS.4 = {{ etcd_cluster_name }}.{{ etcd_namespace }}
+DNS.5 = {{ etcd_cluster_name }}.{{ etcd_namespace }}.svc
+DNS.6 = {{ etcd_cluster_name }}.{{ etcd_namespace }}.svc.{{ cert_domain }}
+DNS.7 = {{ etcd_cluster_name }}-client
+DNS.8 = {{ etcd_cluster_name }}-client.{{ etcd_namespace }}
+DNS.9 = {{ etcd_cluster_name }}-client.{{ etcd_namespace }}.svc
+DNS.10 = {{ etcd_cluster_name }}-client.{{ etcd_namespace }}.svc.{{ cert_domain }}
+DNS.11 = *.{{ etcd_cluster_name }}
+DNS.12 = *.{{ etcd_cluster_name }}.{{ etcd_namespace }}
+DNS.13 = *.{{ etcd_cluster_name }}.{{ etcd_namespace }}.svc
+DNS.14 = *.{{ etcd_cluster_name }}.{{ etcd_namespace }}.svc.{{ cert_domain }}
+DNS.15 = *.{{ etcd_cluster_name }}-client
+DNS.16 = *.{{ etcd_cluster_name }}-client.{{ etcd_namespace }}
+DNS.17 = *.{{ etcd_cluster_name }}-client.{{ etcd_namespace }}.svc
+DNS.18 = *.{{ etcd_cluster_name }}-client.{{ etcd_namespace }}.svc.{{ cert_domain }}
+IP.1 = 127.0.0.1

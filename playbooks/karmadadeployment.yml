@@ -1,0 +1,11 @@
+---
+- hosts: localhost
+  gather_facts: no
+  collections:
+    - kubernetes.core
+    - operator_sdk.util
+  tasks:
+    - meta: end_play
+      when: paused is defined and paused == true
+    - import_role:
+        name: "karmadadeployment"
