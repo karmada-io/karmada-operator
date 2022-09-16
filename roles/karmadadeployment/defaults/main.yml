@@ -69,8 +69,8 @@ kube_service_subnet: "10.96.0.0/12"
 
 
 etcd_certs_expired: "36500"
-etcd_cert_dir: "/tmp/etcd_certs/{{etcd_cluster_name}}"
-etcd_tls_directory: "/tmp/etcdtls/{{etcd_cluster_name}}"
+etcd_cert_dir: "/tmp/etcd_certs/{{etcd_namespace}}/{{etcd_cluster_name}}"
+etcd_tls_directory: "/tmp/etcdtls/{{etcd_namespace}}/{{etcd_cluster_name}}"
 
 # OpenSSL Conf
 etcd_crt_conf_filename: "{{ etcd_cert_dir }}/etcd_openssl.conf"
@@ -95,8 +95,8 @@ etcd_server_key_filename: "{{ etcd_cert_dir }}/server.key"
 karmada_certs_expired: "36500"
 karmada_namespace: "{{ ansible_operator_meta.namespace }}"
 karmada_cluster_name: "{{ ansible_operator_meta.name }}"
-karmada_cert_dir: "/tmp/karmada_certs/{{karmada_cluster_name}}"
-karmada_tls_directory: "/tmp/karmadatls/{{karmada_cluster_name}}"
+karmada_cert_dir: "/tmp/karmada_certs/{{karmada_namespace}}/{{karmada_cluster_name}}"
+karmada_tls_directory: "/tmp/karmadatls/{{karmada_namespace}}/{{karmada_cluster_name}}"
 karmada_server_secret_name: "karmada-cert-secret"
 karmada_client_secret_name: "karmada-cert-secret"
 karmada_cluster_phase: "new"
@@ -142,10 +142,11 @@ karmada_apiserver_deploy: "{{ q('k8s', api_version='apps/v1', kind='Deployment',
 
 # ansible operator
 karmada_config_dir: "/tmp/karmada"
-karmada_config: "{{ karmada_config_dir }}/kubeconfig"
+karmada_config: "{{ karmada_config_dir }}/{{karmada_namespace}}/{{karmada_cluster_name}}/kubeconfig"
+karmada_crd_dir: "{{ karmada_config_dir }}/{{karmada_namespace}}/{{karmada_cluster_name}}"
 
-karmada_controlplane_manifests: "{{ karmada_config_dir }}/controlplane"
-karmada_member_manifests: "{{ karmada_config_dir }}/member"
+karmada_controlplane_manifests: "{{ karmada_config_dir }}/{{karmada_namespace}}/{{karmada_cluster_name}}/controlplane"
+karmada_member_manifests: "{{ karmada_config_dir }}/{{karmada_namespace}}/{{karmada_cluster_name}}/agent"
 
 # scheduler estimator
 scheduler_estimator_enabled: true
@@ -206,8 +207,3 @@ scheduler_estimator_size: "{{ scheduler_estimator.size | int }}"
 
 # search
 search_size: "{{ search.size | int }}"
-
-
-
-
-

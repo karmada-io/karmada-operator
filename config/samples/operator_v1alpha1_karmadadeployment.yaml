@@ -59,7 +59,7 @@ spec:
   members:
     - name: "member1"
       syncMode: "push"
-      kubeConfigSecretName: "member1-config"
+      kubeConfigSecretName: "member1-kubeconfig"
     - name: "member2"
       syncMode: "pull"
-      kubeConfigSecretName: "member2-config"
+      kubeConfigSecretName: "member2-kubeconfig"

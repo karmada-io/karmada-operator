@@ -25,7 +25,7 @@
   - name: copy template service account, cluster role for controller-manager
     template:
       src: "{{ item.file }}"
-      dest: "{{ karmada_config_dir }}/controlplane/{{ item.file }}"
+      dest: "{{ karmada_controlplane_manifests }}/{{ item.file }}"
     with_items:
       - { name: clusterrole, file: clusterrole.yaml, type: clusterrole }
       - { name: clusterrolebinding, file: clusterrolebinding.yaml, type: clusterrolebinding }
@@ -33,14 +33,14 @@
     register: karmada_rbac_manifests
 
   - name: create sa, cluster role for controller-manager
-    shell: "{{ bin_dir }}/kubectl apply -f {{ karmada_config_dir }}/controlplane/{{ item.item.file }}"  # noqa 301 306 303 305
+    shell: "{{ bin_dir }}/kubectl apply -f {{ karmada_controlplane_manifests }}/{{ item.item.file }}"  # noqa 301 306 303 305
     ignore_errors: true
     with_items: "{{ karmada_rbac_manifests.results }}"
 
   - name: copy template karmada-apiserver,kube-controller-manager,karmada-aggregated-apiserver,karmada-search
     template:
       src: "{{ item.file }}"
-      dest: "{{ karmada_config_dir }}/controlplane/{{ item.file }}"
+      dest: "{{ karmada_controlplane_manifests }}/{{ item.file }}"
     with_items:
       - { name: apiserver, file: karmada-apiserver.yaml, type: deployment }
       - { name: controller-manager, file: kube-controller-manager.yaml, type: deployment }
@@ -49,7 +49,7 @@
     register: karmada_v1_manifests
 
   - name: Start karmada-apiserver,kube-controller-manager,karmada-aggregated-apiserver,karmada-search
-    shell: "{{ bin_dir }}/kubectl apply -f {{ karmada_config_dir }}/controlplane/{{ item.item.file }}"  # noqa 301 306 303 305
+    shell: "{{ bin_dir }}/kubectl apply -f {{ karmada_controlplane_manifests }}/{{ item.item.file }}"  # noqa 301 306 303 305
     ignore_errors: true
     with_items: "{{ karmada_v1_manifests.results }}"
 
@@ -69,18 +69,18 @@
   - name: copy crds to ansilbe operator pod
     copy:
       src: "{{ karmada_version }}_crds"
-      dest: "{{ karmada_config_dir }}"
+      dest: "{{ karmada_crd_dir }}"
       mode: 0700
     run_once: yes
 
   - name: add ca.crt to crds on operator pod
     shell: >
       ca_string=$(cat {{ karmada_ca_crt_filename }} | base64 | tr "\n" " "|sed s/[[:space:]]//g) &&
-      sed -i'' -e "s/k_caB/${ca_string}/g" "{{ karmada_config_dir }}/{{ karmada_version }}_crds/patches/webhook_in_clusterresourcebindings.yaml" &&
-      sed -i'' -e "s/k_caB/${ca_string}/g" "{{ karmada_config_dir }}/{{ karmada_version }}_crds/patches/webhook_in_resourcebindings.yaml"
+      sed -i'' -e "s/k_caB/${ca_string}/g" "{{ karmada_crd_dir }}/{{ karmada_version }}_crds/patches/webhook_in_clusterresourcebindings.yaml" &&
+      sed -i'' -e "s/k_caB/${ca_string}/g" "{{ karmada_crd_dir }}/{{ karmada_version }}_crds/patches/webhook_in_resourcebindings.yaml"
 
   - name: create crds on karmada-apiserver
-    shell: "kubectl --kubeconfig={{ karmada_config }} kustomize {{ karmada_config_dir }}/{{ karmada_version }}_crds | kubectl --kubeconfig={{ karmada_config }} apply -f -"  # noqa 301 303 305 306
+    shell: "kubectl --kubeconfig={{ karmada_config }} kustomize {{ karmada_crd_dir }}/{{ karmada_version }}_crds | kubectl --kubeconfig={{ karmada_config }} apply -f -"  # noqa 301 303 305 306
 
   - name: copy template webhook-configuration、aggregated-apiserver-apiservice、search-apiservice、cluster-proxy-admin-rbac to operator pod
     template:
@@ -101,7 +101,7 @@
   - name: copy template karmada shceduler, descheduler, webhook and  controller manager
     template:
       src: "{{ item.file }}"
-      dest: "{{ karmada_config_dir }}/controlplane/{{ item.file }}"
+      dest: "{{ karmada_controlplane_manifests }}/{{ item.file }}"
     with_items:
       - { name: manager, file: karmada-controller-manager.yaml, type: deployment }
       - { name: scheduler, file: karmada-scheduler.yaml, type: deployment }
@@ -110,7 +110,7 @@
     register: karmada_host_manifests
 
   - name: start karmada scheduler, descheduler,webhook and karmada controller manager
-    shell: "{{ bin_dir }}/kubectl apply -f {{ karmada_config_dir }}/controlplane/{{ item.item.file }}"  # noqa 301 306 303 305
+    shell: "{{ bin_dir }}/kubectl apply -f {{ karmada_controlplane_manifests }}/{{ item.item.file }}"  # noqa 301 306 303 305
     ignore_errors: true
     with_items: "{{ karmada_host_manifests.results }}"
 

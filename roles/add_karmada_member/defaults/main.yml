@@ -4,6 +4,16 @@
 scheduler_estimator_enabled: true
 
 karmada_namespace: "{{ ansible_operator_meta.namespace }}"
+karmada_cluster_name: "{{ ansible_operator_meta.name }}"
+current_member_dir: "/tmp/member/{{ karmada_namespace }}/{{ current_member_cluster_name }}"
+current_member_kubeconfig: "{{ current_member_dir }}/{{ current_member_cluster_name }}"
+
+karmada_config_dir: "/tmp/karmada"
+karmada_config: "{{ karmada_config_dir }}/{{karmada_namespace}}/{{karmada_cluster_name}}/kubeconfig"
+
+karmada_controlplane_manifests: "{{ karmada_config_dir }}/{{karmada_namespace}}/{{karmada_cluster_name}}/controlplane"
+karmada_member_manifests: "{{ karmada_config_dir }}/{{karmada_namespace}}/{{karmada_cluster_name}}/agent"
+karmada_addons_manifests: "{{ karmada_config_dir }}/{{karmada_namespace}}/{{karmada_cluster_name}}/addons"
 
 # karmada version
 karmada_version: "v1.2.0"

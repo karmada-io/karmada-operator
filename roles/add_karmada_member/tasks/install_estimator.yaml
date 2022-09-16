@@ -1,20 +1,20 @@
 ---
-- name: Create Karmada agent directory
-  file: name=/tmp/addons/scheduler state=directory
+- name: Create Karmada addons directory
+  file: name={{ karmada_addons_manifests }} state=directory
 
 - name: Create karmada apiserver config by secret
-  shell: "{{ bin_dir }}/kubectl create secret generic {{ current_member_cluster_name }}-kubeconfig --from-file={{ current_member_cluster_name }}-kubeconfig=/tmp/member/{{ current_member_cluster_name }} -n {{ karmada_namespace }}"  # noqa 301 306 303 305
+  shell: "{{ bin_dir }}/kubectl create secret generic {{ current_member_cluster_name }}-kubeconfig --from-file={{ current_member_cluster_name }}-kubeconfig={{ current_member_kubeconfig }} -n {{ karmada_namespace }}"  # noqa 301 306 303 305
   ignore_errors: true
 
 - name: Lay down Karmada scheduler estimator
   template:
     src: "{{ item.file }}"
-    dest: "/tmp/addons/scheduler/{{ item.file }}"
+    dest: "{{ karmada_addons_manifests }}/{{ item.file }}"
   with_items:
     - { name: karmada-estimator, file: karmada-scheduler-estimator.yaml, type: deployment }
   register: karmada_manifests
 
 - name: Start karmada scheduler estimator
-  shell: "{{ bin_dir }}/kubectl apply -f /tmp/addons/scheduler/{{ item.item.file }}"  # noqa 301 306 303 305
+  shell: "{{ bin_dir }}/kubectl apply -f {{ karmada_addons_manifests }}/{{ item.item.file }}"  # noqa 301 306 303 305
   ignore_errors: true
   with_items: "{{ karmada_manifests.results }}"

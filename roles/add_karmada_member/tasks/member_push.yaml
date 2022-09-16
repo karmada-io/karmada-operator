@@ -25,13 +25,14 @@
     - kubectl-karmada
 
 - name: get join cluster
-  shell: "{{ bin_dir }}/kubectl get cluster {{ current_member_cluster_name }} --no-headers | wc -l"  # noqa 306
+  shell: "{{ bin_dir }}/kubectl get cluster {{ current_member_cluster_name }} --kubeconfig {{ karmada_config }} --no-headers | wc -l"  # noqa 306
   register: lines
 
-- name: unjoin cluster if it existed
-  command: "{{ bin_dir }}/kubectl-karmada unjoin {{ current_member_cluster_name }} --cluster-kubeconfig /tmp/member/{{ current_member_cluster_name }} --kubeconfig /tmp/karmada/kubeconfig"
-  when: lines.stdout == '1'
+# todo(riverzhang,if member cluster not ready)
+# - name: unjoin cluster if it existed
+#  command: "{{ bin_dir }}/kubectl-karmada unjoin {{ current_member_cluster_name }} --cluster-kubeconfig {{ current_member_kubeconfig }} --kubeconfig {{ karmada_config }}"
+#  when: lines.stdout != '1'
 
 - name: join cluster
-  command: "{{ karmadactl_download_dir }}/kubectl-karmada join {{ current_member_cluster_name }} --cluster-kubeconfig  /tmp/member/{{ current_member_cluster_name }} --kubeconfig /tmp/karmada/kubeconfig"
-  when: lines.stdout == '1'
+  command: "{{ karmadactl_download_dir }}/kubectl-karmada join {{ current_member_cluster_name }} --cluster-kubeconfig  {{ current_member_kubeconfig }} --kubeconfig {{ karmada_config }}"
+  when: lines.stdout != '1'

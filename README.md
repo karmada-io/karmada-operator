@@ -43,38 +43,33 @@ Uninstall the operator:
 ```
 
 ## Create members cluster secret.yaml, example:
-```YAML
-apiVersion: v1
-stringData:
-  kubeconfig: |-
-    apiVersion: v1
-    clusters:
-    - cluster:
-        certificate-authority-data: XXXXXXX
-        server: https://145.40.9.21:6443
-      name: cluster.local
-    contexts:
-    - context:
-        cluster: cluster.local
-        user: kubernetes-admin
-      name: kubernetes-admin@cluster.local
-    current-context: kubernetes-admin@cluster.local
-    kind: Config
-    preferences: {}
-    users:
-    - name: kubernetes-admin
-      user:
-        client-certificate-data: XXXXXX
-        client-key-data: XXXXXXX
-kind: Secret
-metadata:
-  name: member1-config
-  namespace: karmada-system
-```
-Create the secret: 
-
+show member1 kubeconfig:
 ```sh
-kubectl apply -f secret.yaml
+cat ./member1
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: XXXXXXX
+    server: https://10.233.66.15:6443
+  name: cluster.member1
+contexts:
+- context:
+    cluster: cluster.member1
+    user: kubernetes-admin
+  name: kubernetes-admin@cluster.member1
+current-context: kubernetes-admin@cluster.member1
+kind: Config
+preferences: {}
+users:
+- name: kubernetes-admin
+  user:
+    client-certificate-data: XXXXXXX
+    client-key-data: XXXXX
+```
+Create the secret:
+```sh
+kubectl create secret generic member1-kubeconfig --from-file=member1-kubeconfig=./member1 -n karmada-system
+kubectl create secret generic member2-kubeconfig --from-file=member2-kubeconfig=./member2 -n karmada-system
 ```
 
 ## Create a KarmadaDeployment CR
@@ -143,10 +138,10 @@ spec:
   members:
     - name: "member1"
       syncMode: "push"
-      kubeConfigSecretName: "member1-config"
+      kubeConfigSecretName: "member1-kubeconfig"
     - name: "member2"
       syncMode: "pull"
-      kubeConfigSecretName: "member2-config"
+      kubeConfigSecretName: "member2-kubeconfig"
 ```
 
 Create the CR:
@@ -159,15 +154,17 @@ Ensure that the karmada operator creates the deployment for the sample CR with t
 
 ```console
 $kubectl get deploy -n karmada-system
-NAME                                 READY   STATUS     RESTARTS       AGE
-karmada-aggregated-apiserver          1/1     1            1           2m50s
-karmada-apiserver                     1/1     1            1           2m53s
-karmada-controller-manager            1/1     1            1           2m14s
-karmada-descheduler                   1/1     1            1           2m11s
-karmada-kube-controller-manager       1/1     1            1           2m52s
-karmada-scheduler                     1/1     1            1           2m13s
-karmada-scheduler-estimator-member1   2/2     2            2           108s
-karmada-webhook                       1/1     1            1           2m10s
+NAME                                  READY   UP-TO-DATE   AVAILABLE   AGE
+karmada-aggregated-apiserver          1/1     1            1           2m23s
+karmada-apiserver                     1/1     1            1           2m25s
+karmada-controller-manager            1/1     1            1           1m51s
+karmada-descheduler                   1/1     1            1           1m49s
+karmada-kube-controller-manager       1/1     1            1           2m24s
+karmada-scheduler                     1/1     1            1           1m50s
+karmada-scheduler-estimator-member1   1/1     1            1           1m2s
+karmada-scheduler-estimator-member2   1/1     1            1           1m8s
+karmada-search                        1/1     1            1           2m21s
+karmada-webhook                       1/1     1            1           1m48s
 
 ```
 
@@ -175,29 +172,125 @@ Check the pods and CR status to confirm the status is updated with the karmada p
 
 ```console
 $ kubectl get pods -n karmada-system
-NAME                                                  READY   STATUS    RESTARTS   AGE
-karmada-aggregated-apiserver-74c4bd9976-c7r2b          1/1     Running   0          96s
-karmada-apiserver-65f5fd7fbf-q4hbz                     1/1     Running   0          99s
-karmada-controller-manager-7b6576dcff-mt4t2            1/1     Running   0          60s
-karmada-descheduler-65c75d4448-fjw9b                   1/1     Running   0          57s
-karmada-kube-controller-manager-7bfff8589f-tgcfh       1/1     Running   0          98s
-karmada-scheduler-5f7796487b-7wnbr                     1/1     Running   0          59s
-karmada-scheduler-estimator-member1-6f48c5df7b-56xdj   1/1     Running   0          34s
-karmada-scheduler-estimator-member1-6f48c5df7b-pnlq2   1/1     Running   0          34s
-karmada-webhook-596df4d86c-hb8fg                       1/1     Running   0          56s
-karmadadeployment-sample-etcd-0                        1/1     Running   0          2m29s
-karmadadeployment-sample-etcd-1                        1/1     Running   0          2m26s
-karmadadeployment-sample-etcd-2                        1/1     Running   0          2m23s
+NAME                                                   READY   STATUS      RESTARTS   AGE
+install-kubeconfig-xrltz                               0/1     Completed   0          2m9s
+karmada-aggregated-apiserver-74c4bd9976-rhmbl          1/1     Running     0          2m49s
+karmada-apiserver-65f5fd7fbf-c5xmv                     1/1     Running     0          2m51s
+karmada-controller-manager-7b6576dcff-9qgjg            1/1     Running     0          2m17s
+karmada-descheduler-65c75d4448-jf8mh                   1/1     Running     0          2m15s
+karmada-kube-controller-manager-7bfff8589f-7nzvz       1/1     Running     0          2m50s
+karmada-scheduler-5f7796487b-jnf8v                     1/1     Running     0          2m16s
+karmada-scheduler-estimator-member1-6f48c5df7b-kmrgr   1/1     Running     0          38s
+karmada-scheduler-estimator-member2-d4b55f54b-8tm9k    1/1     Running     0          34s
+karmada-search-647589f58b-sb4m9                        1/1     Running     0          2m47s
+karmada-webhook-596df4d86c-j69c9                       1/1     Running     0          2m14s
+karmadadeployment-sample-etcd-0                        1/1     Running     0          3m28s
+karmadadeployment-sample-etcd-1                        1/1     Running     0          3m27s
+karmadadeployment-sample-etcd-2                        1/1     Running     0          3m25s
 ```
 
 ```console
-$ kubectl get karmadadeployment/karmadadeployment-sample -o yaml
+$ kubectl get karmadadeployment/karmadadeployment-sample -o yaml -n karmada-system
+apiVersion: operator.karmada.io/v1alpha1
+kind: KarmadaDeployment
+metadata:
+  creationTimestamp: "2022-09-17T14:07:01Z"
+  generation: 1
+  name: karmadadeployment-sample
+  namespace: karmada-system
+  resourceVersion: "484749"
+  uid: a6ddc1d5-e688-4697-a7b6-9aff167ed176
+spec:
+  agent:
+    size: 2
+    version: v1.2.0
+  aggregatedApiServer:
+    size: 1
+    version: v1.2.0
+  apiServer:
+    loadBalancerApiserverIp: ""
+    serviceType: ClusterIP
+    size: 1
+    version: v1.21.7
+  clusterDomain: cluster.local
+  controllerManager:
+    size: 1
+    version: v1.2.0
+  descheduler:
+    size: 1
+    version: v1.2.0
+  etcd:
+    pvc:
+      size: 1Gi
+      storageClass: local-path
+    size: 3
+    storageType: pvc
+    version: 3.4.9
+  karmadaRegistry: swr.ap-southeast-1.myhuaweicloud.com
+  kubeControllerManager:
+    size: 1
+    version: v1.21.7
+  kubeRegistry: k8s.gcr.io
+  members:
+  - kubeConfigSecretName: member1-kubeconfig
+    name: member1
+    syncMode: push
+  - kubeConfigSecretName: member2-kubeconfig
+    name: member2
+    syncMode: push
+  scheduler:
+    size: 1
+    version: v1.2.0
+  schedulerEstimator:
+    size: 1
+    version: v1.2.0
+  search:
+    size: 1
+    version: v1.2.0
+  webhook:
+    size: 1
+    version: v1.2.0
+status:
+  clientPort: 2379
+  conditions:
+  - lastTransitionTime: "2022-09-17T14:09:17Z"
+    message: ""
+    reason: ""
+    status: "False"
+    type: Failure
+  - ansibleResult:
+      changed: 1
+      completion: 2022-09-17T14:11:58.77319
+      failures: 0
+      ok: 15
+      skipped: 38
+    lastTransitionTime: "2022-09-17T14:07:01Z"
+    message: Awaiting next reconciliation
+    reason: Successful
+    status: "True"
+    type: Running
+  - lastTransitionTime: "2022-09-17T14:11:59Z"
+    message: Last reconciliation succeeded
+    reason: Successful
+    status: "True"
+    type: Successful
+  controlPaused: false
+  currentVersion: 3.4.9
+  etcdMembers:
+    ready: member1,member2
+    unready: karmadadeployment-sample-etcd-0,karmadadeployment-sample-etcd-1,karmadadeployment-sample-etcd-2
+  etcdPhase: Running
+  karmadaPhase: Unknown
+  serviceName: karmadadeployment-sample-etcd-client
+  size: 3
+  targetVersion: 3.4.9
 ```
 
 ```console
 $ kubectl get cluster --kubeconfig /etc/karmada/kubeconfig
 NAME      VERSION   MODE   READY   AGE
-member1   v1.21.6   Push   True    2min
+member1   v1.21.6   Push   True    3m3s
+member2   v1.21.6   pull   True    3m20s
 ```
 
 ## Cleanup
