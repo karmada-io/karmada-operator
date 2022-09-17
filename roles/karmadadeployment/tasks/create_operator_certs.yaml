@@ -4,9 +4,9 @@
     operator_secret: "{{ lookup('k8s', api_version='v1', kind='Secret', namespace=etcd_namespace,
                                 resource_name=etcd_client_secret_name) }}"
   set_fact:
-    ca_cert: "{{ operator_secret[0]['data']['etcd-client-ca.crt'] | b64decode}}"
-    client_cert: "{{ operator_secret[0]['data']['etcd-client.crt'] | b64decode}}"
-    client_key: "{{ operator_secret[0]['data']['etcd-client.key'] | b64decode}}"
+    ca_cert: "{{ operator_secret['data']['etcd-client-ca.crt'] | b64decode}}"
+    client_cert: "{{ operator_secret['data']['etcd-client.crt'] | b64decode}}"
+    client_key: "{{ operator_secret['data']['etcd-client.key'] | b64decode}}"
 
 - name: create the etcd_tls_directory
   file:

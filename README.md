@@ -42,7 +42,7 @@ Uninstall the operator:
  make undeploy
 ```
 
-## Create members cluster secret.yaml, example:
+## Create members cluster kubeconfig secret on karmada host cluster, example:
 show member1 kubeconfig:
 ```sh
 cat ./member1
@@ -68,6 +68,7 @@ users:
 ```
 Create the secret:
 ```sh
+kubectl create ns karmada-system
 kubectl create secret generic member1-kubeconfig --from-file=member1-kubeconfig=./member1 -n karmada-system
 kubectl create secret generic member2-kubeconfig --from-file=member2-kubeconfig=./member2 -n karmada-system
 ```
@@ -189,6 +190,7 @@ karmadadeployment-sample-etcd-1                        1/1     Running     0    
 karmadadeployment-sample-etcd-2                        1/1     Running     0          3m25s
 ```
 
+Show karmadadeployment status:
 ```console
 $ kubectl get karmadadeployment/karmadadeployment-sample -o yaml -n karmada-system
 apiVersion: operator.karmada.io/v1alpha1
@@ -277,8 +279,7 @@ status:
   controlPaused: false
   currentVersion: 3.4.9
   etcdMembers:
-    ready: member1,member2
-    unready: karmadadeployment-sample-etcd-0,karmadadeployment-sample-etcd-1,karmadadeployment-sample-etcd-2
+    ready: karmadadeployment-sample-etcd-0,karmadadeployment-sample-etcd-1,karmadadeployment-sample-etcd-2
   etcdPhase: Running
   karmadaPhase: Unknown
   serviceName: karmadadeployment-sample-etcd-client
@@ -286,6 +287,7 @@ status:
   targetVersion: 3.4.9
 ```
 
+Show members cluster:
 ```console
 $ kubectl get cluster --kubeconfig /etc/karmada/kubeconfig
 NAME      VERSION   MODE   READY   AGE

@@ -44,33 +44,33 @@
 
 - name: get members of cluster when secure client
   vars:
-    members: "{{ q('etcd_member', cluster_host= etcd_cluster_name + '-client.' + etcd_namespace + '.svc',
-                  cluster_port=etcd_client_port,
+    etcd_members: "{{ q('etcd_member', host=etcd_cluster_name + '-client.' + etcd_namespace + '.svc',
+                  port=etcd_client_port,
                   ca_cert=etcd_tls_directory + '/etcd-ca.crt',
                   cert_cert=etcd_tls_directory + '/etcd-client.crt',
                   cert_key=etcd_tls_directory + '/etcd-client.key') }}"
   set_fact:
-    etcd_cluster_members: "{{ members }}"
-  when: (etcd_cluster_phase == "existing")
+    etcd_cluster_members: "{{ etcd_members }}"
+  when: etcd_cluster_phase == "existing"
   ignore_errors: yes
 
-# - block:
+- block:
 
-#  - name: Set status and exit when cluster is unavailable
-#    vars:
-#      etcd_status: "Unavailable"
-#      etcd_status_reason: "Etcd is trying to establish quorum"
-#    k8s_status:
-#      api_version: operator.karmada.io/v1alpha1
-#      kind: KarmadaDeployment
-#      name: "{{ karmada_cluster_name }}"
-#      namespace: "{{ karmada_namespace }}"
-#      status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
+  - name: Set status and exit when cluster is unavailable
+    vars:
+      etcd_status: "Unavailable"
+      etcd_status_reason: "Etcd is trying to establish quorum"
+    k8s_status:
+      api_version: operator.karmada.io/v1alpha1
+      kind: KarmadaDeployment
+      name: "{{ karmada_cluster_name }}"
+      namespace: "{{ karmada_namespace }}"
+      status: "{{ lookup('template', 'status.yaml') | from_yaml }}"
 
-#  - fail:
-#      msg: cluster is unavailable
+  - fail:
+      msg: cluster is unavailable
 
-#  when: etcd_cluster_phase == "existing" and etcd_cluster_members|length <= (etcd_stateful_set[0].spec.replicas/2)
+  when: etcd_cluster_phase == "existing" and etcd_cluster_members|length <= (etcd_stateful_set[0].spec.replicas/2)
 
 - name: Set status when cluster is available
   vars:
@@ -120,7 +120,7 @@
   - name: get ids of members to be removed
     vars:
       etcd_remove_members: "{{ (etcd_cluster_members | sort(attribute='name'))[(etcd_size|int):] }}"
-    include_tasks: remove_members.yaml
+    include_tasks: remove_etcd_members.yaml
     loop: "{{ etcd_remove_members | reverse | list}} "
 
   when: etcd_cluster_phase == "existing" and (etcd_cluster_members|length|int) > etcd_size|int

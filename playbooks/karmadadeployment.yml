@@ -5,6 +5,7 @@
     - kubernetes.core
     - operator_sdk.util
   tasks:
+    - debug: msg="Running reconcile etcd cluster and Karmada controlplane."
     - meta: end_play
       when: paused is defined and paused == true
     - import_role:
@@ -16,6 +17,7 @@
     - kubernetes.core
     - operator_sdk.util
   tasks:
+    - debug: msg="Running join member cluster to Karmada."
     - import_role:
         name: "add_karmada_member"
 
@@ -26,5 +28,6 @@
 #    - kubernetes.core
 #    - operator_sdk.util
 #  tasks:
+#    - debug: msg="Running unjoin member cluster from Karmada."
 #    - import_role:
 #        name: "del_karmada-member"

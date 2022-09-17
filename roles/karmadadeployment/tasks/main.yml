@@ -42,8 +42,9 @@
     path: "{{ etcd_tls_directory }}"
   register: tls_stat_result
 
-#- name: Create operator certs on secure client
-#  include_tasks: create_operator_certs.yaml
+- name: Create operator certs on secure client
+  include_tasks: create_operator_certs.yaml
+  when: tls_stat_result.stat.exists == False
 
 - name: Create services if it does not exist
   include_tasks: create_etcd_services.yaml
