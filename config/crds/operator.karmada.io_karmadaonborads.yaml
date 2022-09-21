@@ -1,0 +1,340 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: karmadaonborads.operator.karmada.io
+spec:
+  group: operator.karmada.io
+  names:
+    kind: KarmadaOnborad
+    listKind: KarmadaOnboradList
+    plural: karmadaonborads
+    singular: karmadaonborad
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.syncMode
+      name: Mode
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired behavior of the KarmadaOnborad.
+            properties:
+              agent:
+                description: Agent holds settings to karmada-agent component of the
+                  karmada, it only work on SyncMode Pull.
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: 'Annotations is an unstructured key value map stored
+                      with a resource that may be set by external tools to store and
+                      retrieve arbitrary metadata. They are not queryable and should
+                      be preserved when modifying objects. More info: http://kubernetes.io/docs/user-guide/annotations'
+                    type: object
+                  extraArgs:
+                    additionalProperties:
+                      type: string
+                    description: "ExtraArgs is an extra set of flags to pass to the
+                      karmada-scheduler-estimator component or override. A key in
+                      this map is the flag name as it appears on the command line
+                      except without leading dash(es). \n Note: This is a temporary
+                      solution to allow for the configuration of the karmada-scheduler-estimator
+                      component. In the future, we will provide a more structured
+                      way to configure the component. Once that is done, this field
+                      will be discouraged to be used. Incorrect settings on this feild
+                      maybe lead to the corresponding component in an unhealthy state.
+                      Before you do it, please confirm that you understand the risks
+                      of this configuration. \n For supported flags, please see https://github.com/karmada-io/karmada/blob/master/cmd/agent/app/options/options.go
+                      for details."
+                    type: object
+                  imageRepository:
+                    description: ImageRepository sets the container registry to pull
+                      images from. if not set, the ImageRepository defined in KarmadaSpec
+                      will be used instead.
+                    type: string
+                  imageTag:
+                    description: ImageTag allows to specify a tag for the image. In
+                      case this value is set, operator does not change automatically
+                      the version of the above components during upgrades.
+                    type: string
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: 'Map of string keys and values that can be used to
+                      organize and categorize (scope and select) objects. May match
+                      selectors of replication controllers and services. More info:
+                      http://kubernetes.io/docs/user-guide/labels'
+                    type: object
+                  replicas:
+                    description: Number of desired pods. This is a pointer to distinguish
+                      between explicit zero and not specified. Defaults to 1.
+                    format: int32
+                    type: integer
+                  resources:
+                    description: 'Compute Resources required by this component. More
+                      info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                type: object
+              clusterName:
+                description: ClusterName describes the karmada cluster resource name.
+                type: string
+              clusterNamespace:
+                description: ClusterNamespace define namespace in the control plane
+                  where member secrets cluster are stored. (default "karmada-cluster")
+                type: string
+              featureGates:
+                additionalProperties:
+                  type: boolean
+                description: 'FeatureGates enabled by the user. More info: https://github.com/karmada-io/karmada/blob/master/pkg/features/features.go'
+                type: object
+              karmadaControlPlane:
+                description: KarmadaControlPlane describes how to connect karmada
+                  control plane.
+                properties:
+                  karmadaName:
+                    description: KarmadaName specifield name of karmadaDeployment,
+                      it represente which karmada control plane to install.
+                    type: string
+                  secretRef:
+                    description: 'SecretRef represents the secret contains mandatory
+                      credentials to access the member cluster. The secret should
+                      hold credentials as follows: - secret.data.token - secret.data.caBundle'
+                    properties:
+                      name:
+                        description: Name is the name of resource being referenced.
+                        type: string
+                      namespace:
+                        description: Namespace is the namespace for the resource being
+                          referenced.
+                        type: string
+                    type: object
+                type: object
+              karmadaSchedulerEstimator:
+                description: KarmadaSchedulerEstimator holds settings to karmada-scheduler-estimator
+                  component of the karmada.
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: 'Annotations is an unstructured key value map stored
+                      with a resource that may be set by external tools to store and
+                      retrieve arbitrary metadata. They are not queryable and should
+                      be preserved when modifying objects. More info: http://kubernetes.io/docs/user-guide/annotations'
+                    type: object
+                  extraArgs:
+                    additionalProperties:
+                      type: string
+                    description: "ExtraArgs is an extra set of flags to pass to the
+                      karmada-scheduler-estimator component or override. A key in
+                      this map is the flag name as it appears on the command line
+                      except without leading dash(es). \n Note: This is a temporary
+                      solution to allow for the configuration of the karmada-scheduler-estimator
+                      component. In the future, we will provide a more structured
+                      way to configure the component. Once that is done, this field
+                      will be discouraged to be used. Incorrect settings on this feild
+                      maybe lead to the corresponding component in an unhealthy state.
+                      Before you do it, please confirm that you understand the risks
+                      of this configuration. \n For supported flags, please see https://github.com/karmada-io/karmada/blob/master/cmd/scheduler-estimator/app/options/options.go
+                      for details."
+                    type: object
+                  imageRepository:
+                    description: ImageRepository sets the container registry to pull
+                      images from. if not set, the ImageRepository defined in KarmadaSpec
+                      will be used instead.
+                    type: string
+                  imageTag:
+                    description: ImageTag allows to specify a tag for the image. In
+                      case this value is set, operator does not change automatically
+                      the version of the above components during upgrades.
+                    type: string
+                  labels:
+                    additionalProperties:
+                      type: string
+                    description: 'Map of string keys and values that can be used to
+                      organize and categorize (scope and select) objects. May match
+                      selectors of replication controllers and services. More info:
+                      http://kubernetes.io/docs/user-guide/labels'
+                    type: object
+                  replicas:
+                    description: Number of desired pods. This is a pointer to distinguish
+                      between explicit zero and not specified. Defaults to 1.
+                    format: int32
+                    type: integer
+                  resources:
+                    description: 'Compute Resources required by this component. More
+                      info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                type: object
+              memberCluster:
+                description: MemberCluster describes how to connect kubernetes cluster.
+                properties:
+                  name:
+                    description: Name is the name of resource being referenced.
+                    type: string
+                  namespace:
+                    description: Namespace is the namespace for the resource being
+                      referenced.
+                    type: string
+                type: object
+              syncMode:
+                description: SyncMode describes how a cluster sync resources from
+                  karmada control plane.
+                enum:
+                - Push
+                - Pull
+                type: string
+            required:
+            - clusterName
+            - syncMode
+            type: object
+          status:
+            description: Most recently observed status of the KarmadaOnborad.
+            properties:
+              conditions:
+                description: Conditions represents the latest available observations
+                  of a karmada's current state.
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource. --- This struct is intended for direct
+                    use as an array at the field path .status.conditions.  For example,
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
+                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition
+                        transitioned from one status to another. This should be when
+                        the underlying condition changed.  If that is not known, then
+                        using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating
+                        details about the transition. This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation
+                        that the condition was set based upon. For instance, if .metadata.generation
+                        is currently 12, but the .status.conditions[x].observedGeneration
+                        is 9, the condition is out of date with respect to the current
+                        state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating
+                        the reason for the condition's last transition. Producers
+                        of specific condition types may define expected values and
+                        meanings for this field, and whether the values are considered
+                        a guaranteed API. The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                        --- Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              observedGeneration:
+                description: ObservedGeneration is the last observed generation.
+                format: int64
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
