@@ -1,0 +1,5 @@
+apiVersion: operator.karmada.io/v1alpha1
+kind: Karmada
+metadata:
+  name: karmada
+  namespace: karmada-system
