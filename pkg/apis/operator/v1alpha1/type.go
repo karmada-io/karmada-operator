@@ -164,6 +164,7 @@ type LocalEtcd struct {
 	PeerCertSANs []string `json:"peerCertSANs,omitempty"`
 }
 
+// VolumeData describes the settings of etcd data store.
 type VolumeData struct {
 	// The specification for the PersistentVolumeClaim. The entire content is
 	// copied unchanged into the PVC that gets created from this
@@ -269,7 +270,7 @@ type KarmadaAggregratedAPIServer struct {
 	// +optional
 	CertSANs []string `json:"certSANs,omitempty"`
 
-	// ServiceType represents the sevice type of karmada apiserver.
+	// ServiceType represents the service type of karmada apiserver.
 	// it is Nodeport by default.
 	// +optional
 	ServiceType corev1.ServiceType `json:"serviceType,omitempty"`
@@ -531,6 +532,7 @@ type Image struct {
 	ImageTag string `json:"imageTag,omitempty"`
 }
 
+// HostCluster represents the cluster where to install the Karmada control plane.
 type HostCluster struct {
 	// APIEndpoint is the API endpoint of the cluster where deploy Karmada
 	// control plane on.
@@ -558,6 +560,7 @@ const (
 	Ready   ConditionType = "Ready"
 )
 
+// Most recently observed status of the Karmada.
 type KarmadaStatus struct {
 	// ObservedGeneration is the last observed generation.
 	// +optional
@@ -567,7 +570,7 @@ type KarmadaStatus struct {
 	// +optional
 	SecretRef *LocalSecretReference `json:"secretRef,omitempty"`
 
-	// KarmadaVersion represente the karmada verison.
+	// KarmadaVersion represente the karmada version.
 	// +optional
 	KarmadaVersion string `json:"karmadaVersion,omitempty"`
 
@@ -636,6 +639,7 @@ const (
 	Pull ClusterSyncMode = "Pull"
 )
 
+// Spec defines the desired behavior of the KarmadaOnborad.
 type KarmadaOnboradSpec struct {
 	// SyncMode describes how a cluster sync resources from karmada control plane.
 	// +kubebuilder:validation:Enum=Push;Pull

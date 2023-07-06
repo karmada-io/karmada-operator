@@ -664,7 +664,7 @@ spec:
                             type: object
                         type: object
                       serviceType:
-                        description: ServiceType represents the sevice type of karmada
+                        description: ServiceType represents the service type of karmada
                           apiserver. it is Nodeport by default.
                         type: string
                     type: object
@@ -1288,7 +1288,7 @@ spec:
                   type: object
                 type: array
               karmadaVersion:
-                description: KarmadaVersion represente the karmada verison.
+                description: KarmadaVersion represente the karmada version.
                 type: string
               kubernetesVersion:
                 description: KubernetesVersion represente the karmada-apiserver version.

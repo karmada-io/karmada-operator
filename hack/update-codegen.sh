@@ -3,7 +3,6 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-set -ex
 
 # For all commands, the working directory is the parent directory(repo root).
 REPO_ROOT=$(git rev-parse --show-toplevel)
@@ -15,6 +14,21 @@ GO111MODULE=on go install k8s.io/code-generator/cmd/conversion-gen
 GO111MODULE=on go install k8s.io/code-generator/cmd/client-gen
 GO111MODULE=on go install k8s.io/code-generator/cmd/lister-gen
 GO111MODULE=on go install k8s.io/code-generator/cmd/informer-gen
+GO111MODULE=on go install k8s.io/code-generator/cmd/openapi-gen
+export GOPATH=$(go env GOPATH | awk -F ':' '{print $1}')
+export PATH=$PATH:$GOPATH/bin
+
+go_path="${REPO_ROOT}/_go"
+cleanup() {
+  rm -rf "${go_path}"
+}
+trap "cleanup" EXIT SIGINT
+
+cleanup
+
+source "${REPO_ROOT}"/hack/util.sh
+util:create_gopath_tree "${REPO_ROOT}" "${go_path}"
+export GOPATH="${go_path}"
 
 echo "Generating with deepcopy-gen"
 deepcopy-gen \
